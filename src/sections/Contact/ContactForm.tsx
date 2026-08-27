@@ -4,9 +4,16 @@ import { ChevronDown, Info } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { company } from "@/config/company";
-import { contactForm } from "@/config/links";
+import { contactForm, resolveContactTransport } from "@/config/links";
 import { site } from "@/config/site";
 import { products } from "@/data/products";
+
+/*
+ * Resolved once at module scope: this is build-time configuration, not state.
+ * `transport` is "worker" when our own Cloudflare Worker URL has been filled
+ * in, "relay" while it hasn't, and "mailto" if both are switched off.
+ */
+const { transport, url: submitUrl } = resolveContactTransport();
 
 /* ── Options ─────────────────────────────────────────────────────────────────
  * The first six come straight from the product catalogue so a rename there
@@ -139,21 +146,28 @@ function Field({ id, label, required, error, errorId, hint, className, children 
 
 /* ── Form ────────────────────────────────────────────────────────────────── */
 
-type Status = "idle" | "mail-client-opened";
+type Status = "idle" | "sending" | "sent" | "failed" | "mail-client-opened";
 
 /**
  * Enquiry form.
  *
- * There is no backend behind this site. In `mailto` mode the form validates in
- * the browser and then hands a pre-filled draft to the visitor's mail client —
- * it never claims to have sent anything. In `endpoint` mode it is an ordinary
- * HTML form that the browser POSTs natively to whatever service is configured.
+ * Three submission paths, chosen by `resolveContactTransport()`:
+ *
+ *   worker — POSTs JSON to our own Cloudflare Worker via fetch, so the visitor
+ *            stays on the page and gets a real success or failure. The Worker
+ *            sends the mail as info@nexttgentech.com.
+ *   relay  — an ordinary HTML form the browser POSTs natively to a third-party
+ *            relay, which then redirects back to `?sent=1`.
+ *   mailto — validates here, then hands a pre-filled draft to the visitor's own
+ *            mail client. It never claims to have sent anything.
  */
 export function ContactForm() {
   const uid = useId();
   const [values, setValues] = useState<Values>(emptyValues);
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const [status, setStatus] = useState<Status>("idle");
+  /** Server-supplied failure text, shown verbatim so it stays actionable. */
+  const [failure, setFailure] = useState("");
 
   const honeypotRef = useRef<HTMLInputElement>(null);
   const fieldRefs = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({});
@@ -175,9 +189,8 @@ export function ContactForm() {
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
-  const endpoint = contactForm.endpoint.trim();
-  /** Falls back to mailto when the mode is "endpoint" but no URL was set. */
-  const postsToEndpoint = contactForm.mode === "endpoint" && endpoint !== "";
+  /** True for the native browser POST used by the third-party relay only. */
+  const postsNatively = transport === "relay";
 
   const fieldId = (key: FieldKey) => `${uid}-${key}`;
   const errorId = (key: FieldKey) => `${uid}-${key}-error`;
@@ -190,7 +203,8 @@ export function ContactForm() {
       delete next[key];
       return next;
     });
-    if (status !== "idle") setStatus("idle");
+    // Editing clears a previous outcome, but must never cancel one in flight.
+    if (status !== "idle" && status !== "sending") setStatus("idle");
   };
 
   /** Everything a control needs bar its type: identity, value, error wiring. */
@@ -205,6 +219,45 @@ export function ContactForm() {
       setField(key, event.target.value),
   });
 
+  /** POSTs to our Worker and reports what actually happened. */
+  async function sendToWorker() {
+    setStatus("sending");
+    setFailure("");
+
+    try {
+      const response = await fetch(submitUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: values.name.trim(),
+          company: values.companyName.trim(),
+          email: values.email.trim(),
+          phone: values.phone.trim(),
+          solution: values.solution,
+          message: values.message.trim(),
+        }),
+      });
+
+      // The Worker always answers with JSON, but a proxy or an outage in front
+      // of it might not — so a parse failure is treated as a failed send rather
+      // than crashing the handler.
+      const body = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+      if (!response.ok || !body?.ok) {
+        setFailure(body?.error ?? "Something went wrong while sending your enquiry.");
+        setStatus("failed");
+        return;
+      }
+
+      setValues(emptyValues);
+      setStatus("sent");
+    } catch {
+      // Network-level failure: offline, DNS, blocked request.
+      setFailure("We couldn't reach our server. Please check your connection and try again.");
+      setStatus("failed");
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     // A filled honeypot means a bot: drop the submission without a word.
     if (honeypotRef.current?.value) {
@@ -212,10 +265,11 @@ export function ContactForm() {
       return;
     }
 
-    // Endpoint mode: let the browser POST the form the way it normally would.
-    if (postsToEndpoint) return;
+    // Relay mode: let the browser POST the form the way it normally would.
+    if (postsNatively) return;
 
     event.preventDefault();
+    if (status === "sending") return;
 
     const nextErrors = validate(values);
     setErrors(nextErrors);
@@ -227,6 +281,11 @@ export function ContactForm() {
       return;
     }
 
+    if (transport === "worker") {
+      void sendToWorker();
+      return;
+    }
+
     window.location.href = buildMailtoHref(values);
     setStatus("mail-client-opened");
   }
@@ -235,21 +294,21 @@ export function ContactForm() {
     <div className="relative">
       <form
         onSubmit={handleSubmit}
-        method={postsToEndpoint ? "POST" : undefined}
-        action={postsToEndpoint ? endpoint : undefined}
-        // In mailto mode our own validation owns the messaging, so the native
-        // bubbles are suppressed. The `required` attributes stay for semantics.
-        // In endpoint mode the browser guards the real POST.
-        noValidate={!postsToEndpoint}
+        method={postsNatively ? "POST" : undefined}
+        action={postsNatively ? submitUrl : undefined}
+        // When we own the submit (worker / mailto) our own validation writes the
+        // messages, so the native bubbles are suppressed — the `required`
+        // attributes stay for semantics. Only the native relay POST, which
+        // leaves the page before we could intervene, is guarded by the browser.
+        noValidate={!postsNatively}
         className="ng-glass rounded-ng-lg p-6 sm:p-8"
       >
         {/*
-          Relay configuration, sent only when posting to an endpoint.
+          Relay configuration, sent only on the fallback path.
 
-          A static site cannot send mail itself, so the form POSTs to a
-          form-to-email relay which delivers the enquiry to the inbox baked into
-          `contactForm.endpoint`. These underscore-prefixed fields are the
-          relay's control parameters:
+          These are FormSubmit's control parameters, and they only apply while
+          the Worker URL in `contactForm.workerEndpoint` is unset. Once it is
+          filled in, the form fetches JSON instead and none of this is rendered:
 
             _subject  — the subject line that lands in the inbox
             _template — render the fields as a readable table, not raw JSON
@@ -260,7 +319,7 @@ export function ContactForm() {
           `_replyto` is set from the visitor's email field further down, so
           hitting reply in the inbox answers the enquirer directly.
         */}
-        {postsToEndpoint && (
+        {postsNatively && (
           <>
             <input type="hidden" name="_subject" value={`${contactForm.subjectPrefix} New website enquiry`} />
             <input type="hidden" name="_template" value="table" />
@@ -417,31 +476,50 @@ export function ContactForm() {
         </div>
 
         <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button type="submit" variant="primary" size="lg" arrow="right">
-            Send Enquiry
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            arrow={status === "sending" ? false : "right"}
+            disabled={status === "sending"}
+          >
+            {status === "sending" ? "Sending…" : "Send Enquiry"}
           </Button>
 
           <p className="flex items-start gap-2 text-xs leading-relaxed text-ng-muted sm:max-w-xs">
             <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-ng-faint" />
-            {postsToEndpoint ? (
+            {transport === "mailto" ? (
               <span>
-                Your enquiry goes straight to our inbox. We&rsquo;ll reply to the email address you
-                give us.
+                Sending opens your email client with the enquiry pre-filled — nothing leaves your
+                device until you send it there.
               </span>
             ) : (
               <span>
-                This is a static site with no backend. Sending opens your email client with the
-                enquiry pre-filled — nothing leaves your device until you send it there.
+                Your enquiry goes straight to our inbox. We&rsquo;ll reply to the email address you
+                give us.
               </span>
             )}
           </p>
         </div>
 
         <div role="status" aria-live="polite" className="mt-4 empty:mt-0">
-          {justSent && (
+          {(justSent || status === "sent") && (
             <p className="rounded-ng border border-ng-emerald/30 bg-ng-emerald/[0.07] px-4 py-3 text-sm leading-relaxed text-ng-fg2">
               Thanks — your enquiry has been sent. We&rsquo;ll reply to the email address you gave
               us.
+            </p>
+          )}
+
+          {status === "failed" && (
+            <p className="rounded-ng border border-ng-rose/40 bg-ng-rose/[0.07] px-4 py-3 text-sm leading-relaxed text-ng-fg2">
+              {failure} You can also email us directly at{" "}
+              <a
+                href={`mailto:${company.contact.salesEmail}`}
+                className="text-ng-cyan underline underline-offset-2"
+              >
+                {company.contact.salesEmail}
+              </a>
+              .
             </p>
           )}
           {status === "mail-client-opened" && (

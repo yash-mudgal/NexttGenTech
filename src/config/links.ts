@@ -36,38 +36,66 @@ export type SocialKey = keyof typeof socialLinks;
 /**
  * Where the contact form submits.
  *
- *   mode: "mailto"   → opens the visitor's mail client with a prefilled body.
- *                      Works with zero backend. This is the default.
- *   mode: "endpoint" → POSTs multipart form data to `endpoint`. Point this at
- *                      Formspree / Getform / Web3Forms / a Cloudflare Worker.
- *                      No server code lives in this repo either way.
+ * A static site cannot send email itself and has nowhere safe to keep a
+ * credential — anything in the bundle is readable by every visitor. So there
+ * are three honest options, in descending order of quality:
+ *
+ *   mode: "worker" → POSTs JSON to our own Cloudflare Worker (see /worker),
+ *                    which holds the API key as an encrypted secret and sends
+ *                    the mail as info@nexttgentech.com, DKIM-signed. Best
+ *                    deliverability and the sender is genuinely us.
+ *   mode: "relay"  → POSTs form data to FormSubmit, a free third-party relay.
+ *                    Works with no setup, but the mail arrives *from the
+ *                    relay*, and its first-ever submission must be confirmed
+ *                    by clicking a link emailed to the destination address.
+ *   mode: "mailto" → opens the visitor's own mail client with a prefilled
+ *                    draft. Nothing is sent on their behalf.
  */
 export const contactForm = {
-  mode: "endpoint" as "mailto" | "endpoint",
+  mode: "worker" as "mailto" | "relay" | "worker",
 
   /**
-   * Where enquiries are delivered.
+   * Our Cloudflare Worker's URL. Empty until it has been deployed.
    *
-   * A static site cannot send email itself, so the form POSTs to FormSubmit,
-   * a free relay that forwards each submission to the address in the URL —
-   * here, yash.mudgal@nexttgentech.com. No account, no API key, no server.
+   * ⚠️  While this is empty, `mode: "worker"` automatically falls back to the
+   *     relay below, so the live form keeps delivering enquiries either way.
+   *     Paste the URL `wrangler deploy` prints and the switch happens on the
+   *     next build — no other file needs touching.
    *
-   * ⚠️ ONE-TIME ACTIVATION: the very first submission triggers a confirmation
-   * email from FormSubmit to that address. Until someone clicks the link in it,
-   * nothing is delivered. Send one test enquiry from the live site and confirm.
+   *     e.g. "https://nexttgentech-enquiry.<subdomain>.workers.dev"
    *
-   * The mail arrives from FormSubmit's servers, not from info@nexttgentech.com
-   * — sending as your own domain needs SMTP credentials and a backend, which a
-   * static site has nowhere to keep safely. Reply-To is set to the visitor's
-   * address, so replying from the inbox still answers them directly.
-   *
-   * To switch providers later, replace this URL (Formspree, Getform and
-   * Web3Forms all accept the same plain POST) or set mode back to "mailto".
+   * Setup, including the DNS records that authorise us to send as our own
+   * domain, is written out step by step in worker/README.md.
    */
-  endpoint: "https://formsubmit.co/yash.mudgal@nexttgentech.com",
+  workerEndpoint: "", // «REPLACE» with the deployed Worker URL
+
+  /**
+   * Fallback relay, used while `workerEndpoint` is empty.
+   *
+   * ⚠️ ONE-TIME ACTIVATION: FormSubmit emails a confirmation link to the
+   * address in this URL on the very first submission. Until someone clicks it,
+   * nothing is delivered. Deploying the Worker makes this moot.
+   */
+  relayEndpoint: "https://formsubmit.co/yash.mudgal@nexttgentech.com",
 
   subjectPrefix: "[NextGen Enquiry]",
 } as const;
+
+/**
+ * Resolves the three modes above into what the form should actually do,
+ * degrading safely when a URL hasn't been filled in yet.
+ */
+export function resolveContactTransport(): {
+  transport: "mailto" | "relay" | "worker";
+  url: string;
+} {
+  const worker = contactForm.workerEndpoint.trim();
+  const relay = contactForm.relayEndpoint.trim();
+
+  if (contactForm.mode === "worker" && worker) return { transport: "worker", url: worker };
+  if (contactForm.mode !== "mailto" && relay) return { transport: "relay", url: relay };
+  return { transport: "mailto", url: "" };
+}
 
 /** In-page section anchors. Keep in sync with the section `id`s in Home.tsx. */
 export const sectionIds = {

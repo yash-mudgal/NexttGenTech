@@ -78,13 +78,23 @@ leadership by appending entries with `tier: "leadership"`.
 
 ### Contact form
 
-Static site, no backend. `contactForm.mode` in `src/config/links.ts`:
+The site is static, so it cannot send mail itself and has nowhere safe to keep a
+credential. `contactForm.mode` in `src/config/links.ts` picks between three
+honest answers to that:
 
-- **`"mailto"`** (default) — validates client-side, then opens the visitor's mail
-  client with everything pre-filled. The UI says so plainly; it never claims a
-  message was sent.
-- **`"endpoint"`** — set `endpoint` to a Formspree / Getform / Web3Forms /
-  Cloudflare Worker URL and the form POSTs to it natively.
+- **`"worker"`** (current) — POSTs JSON to our own Cloudflare Worker in
+  [`worker/`](worker/README.md), which holds the API key as an encrypted secret
+  and sends the enquiry **as `info@nexttgentech.com`**, DKIM-signed. Best
+  deliverability, and the sender is genuinely us. Free tier, no card.
+  Set `workerEndpoint` to the deployed URL to activate it.
+- **`"relay"`** — POSTs to FormSubmit, a free third-party relay. No setup, but
+  the mail arrives *from the relay* and the first submission must be confirmed
+  via a link emailed to the destination.
+- **`"mailto"`** — validates client-side, then opens the visitor's own mail
+  client with everything pre-filled. It never claims a message was sent.
+
+While `workerEndpoint` is empty, `"worker"` mode falls back to the relay
+automatically, so the form always delivers — setup can't leave it broken.
 
 ### Share image
 

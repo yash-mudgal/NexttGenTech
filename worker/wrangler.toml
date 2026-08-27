@@ -1,0 +1,37 @@
+# =============================================================================
+# Cloudflare Worker — enquiry mailer
+# -----------------------------------------------------------------------------
+# Deployed separately from the website:  cd worker && npm install && npm run deploy
+# The website itself stays a static build on GitHub Pages; this Worker exists
+# only because a static site has nowhere safe to keep an API key.
+#
+# The one value that is NOT here is the API key — secrets never live in a file
+# that gets committed. Set it once with:
+#
+#   npx wrangler secret put RESEND_API_KEY
+#
+# Full setup, including the DNS records: see README.md in this directory.
+# =============================================================================
+
+name = "nexttgentech-enquiry"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Keep the Worker off a public workers.dev URL once a custom route is in place.
+# Until then it stays on, because it is how the form reaches the Worker at all.
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+# Where enquiries are delivered.
+TO_EMAIL = "yash.mudgal@nexttgentech.com"
+
+# The verified sender. The domain part MUST be a domain verified in Resend,
+# otherwise every send is rejected. The display name is free text.
+FROM_EMAIL = "NextGen Software Technologies <info@nexttgentech.com>"
+
+# Origins permitted to POST here. Anything else is refused with 403.
+# The github.io entry covers the GitHub Pages preview URL; drop it if unused.
+ALLOWED_ORIGINS = "https://nexttgentech.com,https://www.nexttgentech.com,https://yash-mudgal.github.io,http://localhost:5173"
