@@ -5,8 +5,12 @@
 import { company } from "./company";
 
 export const site = {
-  /** Canonical origin, no trailing slash. «REPLACE» before deploying. */
-  url: "https://www.nextgensoftwaretechnologies.com",
+  /**
+   * Canonical origin, no trailing slash. Currently the GitHub Pages address.
+   * Change this and the matching tags in index.html, public/robots.txt and
+   * public/sitemap.xml when a custom domain is attached.
+   */
+  url: "https://yash-mudgal.github.io/NexttGenTech",
 
   title: "NextGen Software Technologies | ERP, CRM, HRMS, AI & Software Solutions",
 

@@ -50,11 +50,12 @@ export function useWebGL(): WebGLStatus {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Defer past the first paint so LCP is never blocked by the probe.
-    const id = window.requestAnimationFrame(() => {
-      setState({ supported: detectWebGL(), ready: true });
-    });
-    return () => window.cancelAnimationFrame(id);
+    // Probe directly rather than inside requestAnimationFrame: effects already
+    // run after the first paint, so nothing is gained by deferring, and rAF
+    // does not fire while a tab is in the background. A page opened in an
+    // unfocused tab would otherwise never finish detection and would be stuck
+    // on the fallback even after the visitor switched to it.
+    setState({ supported: detectWebGL(), ready: true });
   }, []);
 
   return {

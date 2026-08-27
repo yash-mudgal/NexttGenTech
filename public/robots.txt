@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-# Update the origin to match src/config/site.ts before deploying.
-Sitemap: https://www.nextgensoftwaretechnologies.com/sitemap.xml
+# Keep this origin in step with `url` in src/config/site.ts.
+Sitemap: https://yash-mudgal.github.io/NexttGenTech/sitemap.xml
