@@ -40,25 +40,25 @@ export interface Leader {
 export const leadership: Leader[] = [
   {
     id: "founder",
-    name: "Founder Name", // «REPLACE»
+    name: "Yash Mudgal",
     role: "Founder & CEO",
     tier: "founding",
-    // «REPLACE» — drop the photo in /public/assets/leadership/ and set this to
-    // e.g. "/assets/leadership/founder.jpg". Left empty on purpose: pointing at
-    // a file that doesn't exist yet would log a 404 on every page load.
-    image: "",
+    image: "/assets/leadership/yash-mudgal.jpg",
+    // «REPLACE» — the four fields below are still placeholder wording. They now
+    // sit under a real name and photograph, so replace them with Yash's own
+    // words before they read as fact.
     specification: "Software Architecture • Enterprise Applications • ERP • AI Strategy",
-    bio: "Professional biography goes here. Describe the founder's engineering background, the thinking behind NextGen and the kind of systems they build.", // «REPLACE»
+    bio: "Professional biography goes here. Describe the engineering background behind NextGen, the thinking that shaped its products, and the kind of systems the team builds.",
     expertise: [
       "Software Architecture",
       "Enterprise Applications",
       "ERP",
       "AI & Technology Strategy",
       "Business Strategy",
-    ], // «REPLACE»
+    ],
     experience: "", // «REPLACE» e.g. "12+ years" — empty hides the badge
-    linkedin: "#", // «REPLACE»
-    email: "", // «REPLACE»
+    linkedin: "#", // «REPLACE» — renders as an inert locked control until set
+    email: "", // «REPLACE» — empty hides the mail button
   },
   {
     id: "co-founder",
