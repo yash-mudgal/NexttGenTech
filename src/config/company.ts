@@ -30,13 +30,24 @@ export const company = {
 
   /* ── Contact ─────────────────────────────────────────────────────────── */
   contact: {
-    email: "info@nextgensoftwaretechnologies.com", // «REPLACE» with real inbox
-    salesEmail: "sales@nextgensoftwaretechnologies.com", // «REPLACE»
-    careersEmail: "careers@nextgensoftwaretechnologies.com", // «REPLACE»
-    phone: "+91 00000 00000", // «REPLACE» with real number
+    email: "info@nexttgentech.com",
+    /**
+     * Where the contact form addresses its enquiry.
+     *
+     * Deliberately the same inbox as `email`: a dedicated sales@ or careers@
+     * address has not been confirmed to exist, and pointing the form at one
+     * that doesn't would drop every enquiry silently. Split these out only
+     * once those mailboxes are real.
+     */
+    salesEmail: "info@nexttgentech.com",
+    careersEmail: "info@nexttgentech.com",
+    phone: "+91 96229 68107",
     /** Digits only — used to build the tel: href. */
-    phoneHref: "+910000000000", // «REPLACE»
-    whatsapp: "", // «REPLACE» digits only, e.g. "919999999999". Empty hides the button.
+    phoneHref: "+919622968107",
+    // «REPLACE» digits only, e.g. "919622968107". Empty hides the button.
+    // Left unset because it hasn't been confirmed that this number is on
+    // WhatsApp — a dead wa.me link is worse than no button.
+    whatsapp: "",
     address: {
       line1: "Registered Office", // «REPLACE»
       line2: "City, State", // «REPLACE»

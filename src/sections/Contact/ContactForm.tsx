@@ -1,10 +1,11 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import { ChevronDown, Info } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { company } from "@/config/company";
 import { contactForm } from "@/config/links";
+import { site } from "@/config/site";
 import { products } from "@/data/products";
 
 /* ── Options ─────────────────────────────────────────────────────────────────
@@ -157,6 +158,23 @@ export function ContactForm() {
   const honeypotRef = useRef<HTMLInputElement>(null);
   const fieldRefs = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({});
 
+  /*
+   * The relay returns the visitor to `?sent=1` after a successful POST, so the
+   * confirmation is shown here rather than on a third-party thank-you page.
+   * Read once on mount: this is a full navigation back to the site, not a
+   * client-side state change.
+   */
+  const [justSent, setJustSent] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("sent") !== "1") return;
+    setJustSent(true);
+    // Drop the flag so a refresh doesn't re-announce a delivery that isn't happening.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("sent");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+
   const endpoint = contactForm.endpoint.trim();
   /** Falls back to mailto when the mode is "endpoint" but no URL was set. */
   const postsToEndpoint = contactForm.mode === "endpoint" && endpoint !== "";
@@ -225,6 +243,33 @@ export function ContactForm() {
         noValidate={!postsToEndpoint}
         className="ng-glass rounded-ng-lg p-6 sm:p-8"
       >
+        {/*
+          Relay configuration, sent only when posting to an endpoint.
+
+          A static site cannot send mail itself, so the form POSTs to a
+          form-to-email relay which delivers the enquiry to the inbox baked into
+          `contactForm.endpoint`. These underscore-prefixed fields are the
+          relay's control parameters:
+
+            _subject  — the subject line that lands in the inbox
+            _template — render the fields as a readable table, not raw JSON
+            _captcha  — we already screen bots with the honeypot above
+            _next     — where the visitor is returned afterwards, so they see
+                        our own confirmation instead of the relay's page
+
+          `_replyto` is set from the visitor's email field further down, so
+          hitting reply in the inbox answers the enquirer directly.
+        */}
+        {postsToEndpoint && (
+          <>
+            <input type="hidden" name="_subject" value={`${contactForm.subjectPrefix} New website enquiry`} />
+            <input type="hidden" name="_template" value="table" />
+            <input type="hidden" name="_captcha" value="false" />
+            <input type="hidden" name="_next" value={`${site.url}/?sent=1#contact`} />
+            <input type="hidden" name="_replyto" value={values.email} />
+          </>
+        )}
+
         {/* Honeypot — off-screen, unreachable by keyboard, ignored on submit. */}
         <div aria-hidden="true" className="absolute -left-[9999px] top-0 h-0 w-0 overflow-hidden">
           <label htmlFor={`${uid}-website`}>Website</label>
@@ -380,8 +425,8 @@ export function ContactForm() {
             <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-ng-faint" />
             {postsToEndpoint ? (
               <span>
-                This site has no server of its own — the form posts straight to the configured form
-                service.
+                Your enquiry goes straight to our inbox. We&rsquo;ll reply to the email address you
+                give us.
               </span>
             ) : (
               <span>
@@ -393,6 +438,12 @@ export function ContactForm() {
         </div>
 
         <div role="status" aria-live="polite" className="mt-4 empty:mt-0">
+          {justSent && (
+            <p className="rounded-ng border border-ng-emerald/30 bg-ng-emerald/[0.07] px-4 py-3 text-sm leading-relaxed text-ng-fg2">
+              Thanks — your enquiry has been sent. We&rsquo;ll reply to the email address you gave
+              us.
+            </p>
+          )}
           {status === "mail-client-opened" && (
             <p className="rounded-ng border border-ng-cyan/30 bg-ng-cyan/[0.06] px-4 py-3 text-sm leading-relaxed text-ng-fg2">
               Your email client should now be open with this enquiry pre-filled.{" "}

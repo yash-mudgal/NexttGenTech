@@ -43,8 +43,29 @@ export type SocialKey = keyof typeof socialLinks;
  *                      No server code lives in this repo either way.
  */
 export const contactForm = {
-  mode: "mailto" as "mailto" | "endpoint",
-  endpoint: "", // «REPLACE» when mode === "endpoint"
+  mode: "endpoint" as "mailto" | "endpoint",
+
+  /**
+   * Where enquiries are delivered.
+   *
+   * A static site cannot send email itself, so the form POSTs to FormSubmit,
+   * a free relay that forwards each submission to the address in the URL —
+   * here, yash.mudgal@nexttgentech.com. No account, no API key, no server.
+   *
+   * ⚠️ ONE-TIME ACTIVATION: the very first submission triggers a confirmation
+   * email from FormSubmit to that address. Until someone clicks the link in it,
+   * nothing is delivered. Send one test enquiry from the live site and confirm.
+   *
+   * The mail arrives from FormSubmit's servers, not from info@nexttgentech.com
+   * — sending as your own domain needs SMTP credentials and a backend, which a
+   * static site has nowhere to keep safely. Reply-To is set to the visitor's
+   * address, so replying from the inbox still answers them directly.
+   *
+   * To switch providers later, replace this URL (Formspree, Getform and
+   * Web3Forms all accept the same plain POST) or set mode back to "mailto".
+   */
+  endpoint: "https://formsubmit.co/yash.mudgal@nexttgentech.com",
+
   subjectPrefix: "[NextGen Enquiry]",
 } as const;
 
