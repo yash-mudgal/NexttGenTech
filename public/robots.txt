@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 # Keep this origin in step with `url` in src/config/site.ts.
-Sitemap: https://yash-mudgal.github.io/NexttGenTech/sitemap.xml
+Sitemap: https://nexttgentech.com/sitemap.xml

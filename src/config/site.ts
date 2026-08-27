@@ -6,11 +6,14 @@ import { company } from "./company";
 
 export const site = {
   /**
-   * Canonical origin, no trailing slash. Currently the GitHub Pages address.
-   * Change this and the matching tags in index.html, public/robots.txt and
-   * public/sitemap.xml when a custom domain is attached.
+   * Canonical origin, no trailing slash.
+   *
+   * If this ever changes, update it in four places together: here, the
+   * canonical/og/twitter tags in index.html, public/robots.txt and
+   * public/sitemap.xml — and public/CNAME, which is what tells GitHub Pages
+   * (and this project's Vite base path) that a custom domain is in use.
    */
-  url: "https://yash-mudgal.github.io/NexttGenTech",
+  url: "https://nexttgentech.com",
 
   title: "NextGen Software Technologies | ERP, CRM, HRMS, AI & Software Solutions",
 
