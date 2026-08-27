@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
@@ -7,22 +8,28 @@ import tailwindcss from "@tailwindcss/vite";
  * Public base path.
  *
  * A GitHub Pages *project* site is served from `https://<user>.github.io/<repo>/`,
- * so every asset URL needs that prefix or the page loads a blank screen. In CI
- * we derive it from `GITHUB_REPOSITORY` ("owner/repo") so nothing has to be
- * hardcoded; a user/organisation site (`<user>.github.io`) is served from the
- * root and keeps "/". Locally, and on Vercel/Netlify/Cloudflare, it stays "/".
+ * so every asset URL needs that prefix or the page loads blank. In CI we derive
+ * it from `GITHUB_REPOSITORY` ("owner/repo") so nothing has to be hardcoded.
  *
- * Override with `VITE_BASE=/whatever/ npm run build` if you need to.
+ * Three cases resolve to the root instead:
+ *   · a custom domain — the presence of public/CNAME is the signal, so adding
+ *     or removing a domain needs no config change here;
+ *   · a user/org site (`<user>.github.io`);
+ *   · local builds and Vercel/Netlify/Cloudflare, which have no GITHUB_REPOSITORY.
+ *
+ * Override with `VITE_BASE=/whatever/ npm run build` if you ever need to.
  */
 function resolveBase(): string {
   if (process.env.VITE_BASE) return process.env.VITE_BASE;
+
+  // A CNAME file means Pages serves this site from the domain root.
+  if (existsSync(fileURLToPath(new URL("./public/CNAME", import.meta.url)))) return "/";
 
   const repository = process.env.GITHUB_REPOSITORY;
   if (!repository) return "/";
 
   const [owner, name] = repository.split("/");
   if (!name) return "/";
-  // <user>.github.io is served from the domain root, not a subdirectory.
   if (name.toLowerCase() === `${owner.toLowerCase()}.github.io`) return "/";
   return `/${name}/`;
 }
