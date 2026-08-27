@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { lazy, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
@@ -8,6 +8,7 @@ import { Aura, GridBackdrop } from "@/components/ui/Aura";
 import { Reveal } from "@/components/ui/Reveal";
 import Icon from "@/components/ui/Icon";
 import Tag from "@/components/ui/Tag";
+import SceneView from "@/components/3d/SceneView";
 import { company } from "@/config/company";
 import { products } from "@/data/products";
 import { accentOf } from "@/lib/accent";
@@ -15,10 +16,16 @@ import { cn } from "@/lib/cn";
 import { useIsMobile, usePrefersReducedMotion } from "@/hooks";
 import EcosystemNode from "./EcosystemNode";
 import type { EcoNode } from "./EcosystemNode";
+import type { EcosystemSceneNode } from "./EcosystemScene";
+
+/* Everything `three` stays behind this boundary so it never touches the
+ * initial bundle. SceneView renders it into the site's shared WebGL canvas. */
+const EcosystemScene = lazy(() => import("./EcosystemScene"));
 
 /* ── Geometry ───────────────────────────────────────────────────────────────
- * The map is drawn in a 1000×1000 user space so the dash animation (which ends
- * at a fixed -220 offset) reads as a slow, deliberate flow rather than a blur.
+ * The static map is drawn in a 1000×1000 user space so the dash animation
+ * (which ends at a fixed -220 offset) reads as a slow, deliberate flow rather
+ * than a blur.
  * -------------------------------------------------------------------------- */
 
 const CENTRE = 500;
@@ -50,6 +57,9 @@ const CORE: EcoNode = {
   ],
   accent: accentOf("brand"),
 };
+
+/** Second line on the core marker, in both the scene and the static map. */
+const CORE_CAPTION = "Business Core";
 
 const productNodes: EcoNode[] = products.map((product) => ({
   id: product.id,
@@ -122,8 +132,25 @@ const layerNodes: EcoNode[] = [
 
 const ecosystemNodes: EcoNode[] = [...productNodes, ...layerNodes];
 
-/** Roving-tabindex order: the core sits first, then the ring, clockwise. */
+/** Roving-tabindex order: the core sits first, then the rest. */
 const tabItems: EcoNode[] = [CORE, ...ecosystemNodes];
+
+/** The 3D graph only needs identity, label and colour — never the whole node. */
+const sceneNodes: EcosystemSceneNode[] = ecosystemNodes.map((node, index) => ({
+  id: node.id,
+  label: node.label,
+  hex: node.accent.hex,
+  product: index < productNodes.length,
+}));
+
+/** Ring positions for the static map, in the 1000×1000 user space. */
+const positions = ecosystemNodes.map((_, index) => {
+  const angle = ((START_ANGLE + (360 / ecosystemNodes.length) * index) * Math.PI) / 180;
+  return {
+    x: CENTRE + RADIUS * Math.cos(angle),
+    y: CENTRE + RADIUS * Math.sin(angle),
+  };
+});
 
 /** Faint chords between neighbouring platforms, hinting at cross-system flow. */
 const chords: [number, number][] = [
@@ -133,6 +160,171 @@ const chords: [number, number][] = [
   [3, 4],
   [4, 5],
 ];
+
+/* ── Static map ─────────────────────────────────────────────────────────────
+ * The radial diagram the section used before the graph became 3D. It now
+ * serves as SceneView's fallback — the designed alternative for devices with
+ * no WebGL and for visitors who asked for reduced motion. It is purely
+ * presentational: every control lives in the tablist below the graph.
+ * -------------------------------------------------------------------------- */
+
+interface EcosystemMapProps {
+  baseId: string;
+  activeId: string | null;
+  reducedMotion: boolean;
+  /** Phone size: icons only, since nine labels cannot fit at 304px. */
+  compact?: boolean;
+}
+
+function EcosystemMap({ baseId, activeId, reducedMotion, compact = false }: EcosystemMapProps) {
+  return (
+    <div className="absolute inset-0">
+      <svg
+        aria-hidden="true"
+        focusable="false"
+        viewBox="0 0 1000 1000"
+        className="absolute inset-0 size-full"
+      >
+        <defs>
+          {ecosystemNodes.map((node, index) => {
+            const point = positions[index];
+            if (!point) return null;
+            return (
+              <linearGradient
+                key={node.id}
+                id={`${baseId}-spoke-${node.id}`}
+                gradientUnits="userSpaceOnUse"
+                x1={CENTRE}
+                y1={CENTRE}
+                x2={point.x}
+                y2={point.y}
+              >
+                <stop offset="0%" stopColor={node.accent.hex} stopOpacity={0.06} />
+                <stop offset="55%" stopColor={node.accent.hex} stopOpacity={0.4} />
+                <stop offset="100%" stopColor={node.accent.hex} stopOpacity={0.85} />
+              </linearGradient>
+            );
+          })}
+        </defs>
+
+        {/* Orbit guide. */}
+        <circle
+          cx={CENTRE}
+          cy={CENTRE}
+          r={RADIUS}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1}
+          strokeDasharray="5 13"
+          className="text-ng-line"
+        />
+
+        {/* Cross-system chords between neighbouring platforms. */}
+        {chords.map(([from, to]) => {
+          const a = positions[from];
+          const b = positions[to];
+          if (!a || !b) return null;
+          const involved =
+            activeId === ecosystemNodes[from]?.id || activeId === ecosystemNodes[to]?.id;
+          return (
+            <line
+              key={`chord-${from}-${to}`}
+              x1={a.x}
+              y1={a.y}
+              x2={b.x}
+              y2={b.y}
+              stroke="currentColor"
+              strokeWidth={involved ? 1.6 : 1}
+              strokeOpacity={activeId && !involved ? 0.18 : 0.55}
+              className="text-ng-line2 transition-all duration-[420ms] ease-ng"
+            />
+          );
+        })}
+
+        {/* Spokes from the core out to each system. */}
+        {ecosystemNodes.map((node, index) => {
+          const point = positions[index];
+          if (!point) return null;
+          const isActive = activeId === node.id;
+          const dimmed = Boolean(activeId) && !isActive;
+          return (
+            <line
+              key={node.id}
+              x1={CENTRE}
+              y1={CENTRE}
+              x2={point.x}
+              y2={point.y}
+              stroke={`url(#${baseId}-spoke-${node.id})`}
+              strokeWidth={isActive ? 6 : 3}
+              strokeLinecap="round"
+              strokeDasharray="18 26"
+              strokeOpacity={dimmed ? 0.3 : 1}
+              style={reducedMotion ? undefined : { animationDuration: isActive ? "1.1s" : "2.6s" }}
+              className={cn(
+                "transition-[stroke-width,stroke-opacity] duration-[420ms] ease-ng",
+                !reducedMotion && "animate-ng-dash",
+              )}
+            />
+          );
+        })}
+      </svg>
+
+      {/* Core. */}
+      <span className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
+        <span
+          className={cn(
+            "absolute inset-0 rounded-full ring-1 ring-ng-cyan/40",
+            !reducedMotion && "animate-ng-pulse-ring",
+          )}
+        />
+        <span
+          className={cn(
+            "ng-glass relative flex flex-col items-center justify-center gap-1 rounded-full transition-all duration-[420ms] ease-ng",
+            compact ? "size-20" : "size-26 sm:size-32",
+            activeId === null || activeId === CORE.id
+              ? "ring-1 ring-ng-cyan/50 shadow-ng-glow-cyan"
+              : "ring-1 ring-ng-line",
+          )}
+        >
+          <span
+            className={cn(
+              "font-display font-semibold tracking-[0.22em] text-ng-fg",
+              compact ? "text-[0.5625rem]" : "text-[0.6875rem] sm:text-xs",
+            )}
+          >
+            {company.logoMark}
+          </span>
+          <span
+            className={cn(
+              "font-mono uppercase tracking-[0.18em] text-ng-cyan",
+              compact ? "text-[0.4375rem]" : "text-[0.5rem] sm:text-[0.5625rem]",
+            )}
+          >
+            {CORE_CAPTION}
+          </span>
+        </span>
+      </span>
+
+      {/* Ring. */}
+      {ecosystemNodes.map((node, index) => {
+        const point = positions[index];
+        if (!point) return null;
+        const isActive = activeId === node.id;
+        return (
+          <EcosystemNode
+            key={node.id}
+            node={node}
+            x={point.x / 10}
+            y={point.y / 10}
+            active={isActive}
+            dimmed={Boolean(activeId) && !isActive}
+            compact={compact}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 /* ── Detail panel ───────────────────────────────────────────────────────── */
 
@@ -178,9 +370,14 @@ function NodeDetail({ node }: { node: EcoNode }) {
 /* ── Section ────────────────────────────────────────────────────────────── */
 
 /**
- * The connected-platform map: nine systems orbiting a shared core, with a
- * detail panel that follows hover, focus and selection. Below `md` the radial
- * would be an unreadable tangle, so the same data becomes an accordion.
+ * The connected-platform map: nine systems orbiting a shared core as a 3D
+ * network, with a detail panel that follows hover, focus and selection.
+ *
+ * The graph is decorative. Selection is driven by the tablist of real buttons
+ * beneath it and mirrored into the scene, so the section works identically
+ * with a keyboard, with no WebGL, and with reduced motion. Below `md` the
+ * radial ring of labels would be an unreadable tangle, so the same data
+ * becomes an accordion under a compact version of the graph.
  */
 export function ErpEcosystem() {
   const baseId = useId();
@@ -195,19 +392,6 @@ export function ErpEcosystem() {
 
   const activeId = hovered ?? pinned;
   const detail = activeId ? (tabItems.find((node) => node.id === activeId) ?? CORE) : CORE;
-
-  const positions = useMemo(
-    () =>
-      ecosystemNodes.map((_, index) => {
-        const angle =
-          ((START_ANGLE + (360 / ecosystemNodes.length) * index) * Math.PI) / 180;
-        return {
-          x: CENTRE + RADIUS * Math.cos(angle),
-          y: CENTRE + RADIUS * Math.sin(angle),
-        };
-      }),
-    [],
-  );
 
   const moveFocus = (next: number) => {
     const total = tabItems.length;
@@ -248,6 +432,34 @@ export function ErpEcosystem() {
     if (index >= 0) setFocusIndex(index);
   };
 
+  /** The graph itself, sized by its caller. */
+  const graph = (compact: boolean) => (
+    <SceneView
+      className={cn(
+        "mx-auto aspect-square w-full",
+        compact ? "max-w-[19rem]" : "max-w-[36rem]",
+      )}
+      cameraPosition={[0, 0, 10]}
+      cameraFov={45}
+      fallback={
+        <EcosystemMap
+          baseId={baseId}
+          activeId={activeId}
+          reducedMotion={reducedMotion}
+          compact={compact}
+        />
+      }
+    >
+      <EcosystemScene
+        nodes={sceneNodes}
+        activeId={activeId}
+        coreLabel={company.logoMark}
+        coreKind={CORE_CAPTION}
+        compact={compact}
+      />
+    </SceneView>
+  );
+
   return (
     <Section
       label="Connected platform ecosystem"
@@ -274,9 +486,11 @@ export function ErpEcosystem() {
       />
 
       {isMobile ? (
-        /* ── Accordion fallback ───────────────────────────────────────── */
-        <div className="mt-12">
-          <div className="ng-card rounded-ng-card p-5">
+        /* ── Compact graph + accordion ────────────────────────────────── */
+        <div className="mt-10">
+          {graph(true)}
+
+          <div className="ng-card mt-4 rounded-ng-card p-5">
             <div className="flex items-center gap-3">
               <span
                 className={cn(
@@ -368,175 +582,68 @@ export function ErpEcosystem() {
           </ul>
         </div>
       ) : (
-        /* ── Radial map ───────────────────────────────────────────────── */
+        /* ── Network graph + tablist + detail panel ───────────────────── */
         <div className="mt-14 grid items-center gap-10 lg:mt-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <Reveal direction="none" scale className="min-w-0">
+            {graph(false)}
+
+            {/*
+              The accessible control surface. The graph above is aria-hidden and
+              pointer-transparent — a canvas cannot be tabbed to — so every
+              system is selected from here and the scene mirrors the result.
+            */}
             <div
               role="tablist"
               aria-label="Connected systems"
               aria-orientation="horizontal"
-              className="relative mx-auto aspect-square w-full max-w-[36rem]"
+              className="mx-auto mt-6 flex max-w-[38rem] flex-wrap justify-center gap-1.5"
             >
-              <svg
-                aria-hidden="true"
-                focusable="false"
-                viewBox="0 0 1000 1000"
-                className="absolute inset-0 size-full"
-              >
-                <defs>
-                  {ecosystemNodes.map((node, index) => {
-                    const point = positions[index];
-                    if (!point) return null;
-                    return (
-                      <linearGradient
-                        key={node.id}
-                        id={`${baseId}-spoke-${node.id}`}
-                        gradientUnits="userSpaceOnUse"
-                        x1={CENTRE}
-                        y1={CENTRE}
-                        x2={point.x}
-                        y2={point.y}
-                      >
-                        <stop offset="0%" stopColor={node.accent.hex} stopOpacity={0.06} />
-                        <stop offset="55%" stopColor={node.accent.hex} stopOpacity={0.4} />
-                        <stop offset="100%" stopColor={node.accent.hex} stopOpacity={0.85} />
-                      </linearGradient>
-                    );
-                  })}
-                </defs>
-
-                {/* Orbit guide. */}
-                <circle
-                  cx={CENTRE}
-                  cy={CENTRE}
-                  r={RADIUS}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1}
-                  strokeDasharray="5 13"
-                  className="text-ng-line"
-                />
-
-                {/* Cross-system chords between neighbouring platforms. */}
-                {chords.map(([from, to]) => {
-                  const a = positions[from];
-                  const b = positions[to];
-                  if (!a || !b) return null;
-                  const involved =
-                    activeId === ecosystemNodes[from]?.id || activeId === ecosystemNodes[to]?.id;
-                  return (
-                    <line
-                      key={`chord-${from}-${to}`}
-                      x1={a.x}
-                      y1={a.y}
-                      x2={b.x}
-                      y2={b.y}
-                      stroke="currentColor"
-                      strokeWidth={involved ? 1.6 : 1}
-                      strokeOpacity={activeId && !involved ? 0.18 : 0.55}
-                      className="text-ng-line2 transition-all duration-[420ms] ease-ng"
-                    />
-                  );
-                })}
-
-                {/* Spokes from the core out to each system. */}
-                {ecosystemNodes.map((node, index) => {
-                  const point = positions[index];
-                  if (!point) return null;
-                  const isActive = activeId === node.id;
-                  const dimmed = Boolean(activeId) && !isActive;
-                  return (
-                    <line
-                      key={node.id}
-                      x1={CENTRE}
-                      y1={CENTRE}
-                      x2={point.x}
-                      y2={point.y}
-                      stroke={`url(#${baseId}-spoke-${node.id})`}
-                      strokeWidth={isActive ? 6 : 3}
-                      strokeLinecap="round"
-                      strokeDasharray="18 26"
-                      strokeOpacity={dimmed ? 0.3 : 1}
-                      style={reducedMotion ? undefined : { animationDuration: isActive ? "1.1s" : "2.6s" }}
-                      className={cn(
-                        "transition-[stroke-width,stroke-opacity] duration-[420ms] ease-ng",
-                        !reducedMotion && "animate-ng-dash",
-                      )}
-                    />
-                  );
-                })}
-              </svg>
-
-              {/* Core. */}
-              <button
-                ref={(element) => {
-                  nodeRefs.current[0] = element;
-                }}
-                id={`${baseId}-tab-core`}
-                type="button"
-                role="tab"
-                aria-selected={pinned === null}
-                aria-controls={panelId}
-                tabIndex={focusIndex === 0 ? 0 : -1}
-                onMouseEnter={() => setHovered(CORE.id)}
-                onMouseLeave={() => setHovered(null)}
-                onFocus={() => setHovered(CORE.id)}
-                onBlur={() => setHovered(null)}
-                onClick={() => {
-                  setPinned(null);
-                  setFocusIndex(0);
-                }}
-                onKeyDown={handleKeyDown(0)}
-                className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full"
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "absolute inset-0 rounded-full ring-1 ring-ng-cyan/40",
-                    !reducedMotion && "animate-ng-pulse-ring",
-                  )}
-                />
-                <span
-                  className={cn(
-                    "ng-glass relative flex size-26 flex-col items-center justify-center gap-1 rounded-full transition-all duration-[420ms] ease-ng sm:size-32",
-                    activeId === CORE.id
-                      ? "ring-1 ring-ng-cyan/50 shadow-ng-glow-cyan"
-                      : "ring-1 ring-ng-line",
-                  )}
-                >
-                  <span className="font-display text-[0.6875rem] font-semibold tracking-[0.22em] text-ng-fg sm:text-xs">
-                    {company.logoMark}
-                  </span>
-                  <span className="font-mono text-[0.5rem] uppercase tracking-[0.18em] text-ng-cyan sm:text-[0.5625rem]">
-                    Business Core
-                  </span>
-                </span>
-              </button>
-
-              {/* Ring. */}
-              {ecosystemNodes.map((node, index) => {
-                const point = positions[index];
-                if (!point) return null;
-                const isActive = activeId === node.id;
+              {tabItems.map((node, index) => {
+                const isCore = node.id === CORE.id;
+                const isActive = isCore ? activeId === null || activeId === CORE.id : activeId === node.id;
                 return (
-                  <EcosystemNode
+                  <button
                     key={node.id}
-                    node={node}
-                    x={point.x / 10}
-                    y={point.y / 10}
-                    active={isActive}
-                    selected={pinned === node.id}
-                    dimmed={Boolean(activeId) && !isActive}
-                    id={`${baseId}-tab-${node.id}`}
-                    panelId={panelId}
-                    tabIndex={focusIndex === index + 1 ? 0 : -1}
-                    registerRef={(element) => {
-                      nodeRefs.current[index + 1] = element;
+                    ref={(element) => {
+                      nodeRefs.current[index] = element;
                     }}
-                    onHover={setHovered}
-                    onSelect={toggle}
-                    onKeyDown={handleKeyDown(index + 1)}
-                  />
+                    id={`${baseId}-tab-${node.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={isCore ? pinned === null : pinned === node.id}
+                    aria-controls={panelId}
+                    tabIndex={focusIndex === index ? 0 : -1}
+                    onMouseEnter={() => setHovered(node.id)}
+                    onMouseLeave={() => setHovered(null)}
+                    onFocus={() => setHovered(node.id)}
+                    onBlur={() => setHovered(null)}
+                    onClick={() => {
+                      if (isCore) {
+                        setPinned(null);
+                        setFocusIndex(index);
+                        return;
+                      }
+                      toggle(node.id);
+                    }}
+                    onKeyDown={handleKeyDown(index)}
+                    className={cn(
+                      "flex min-h-11 items-center gap-2 rounded-ng border px-3 py-2 text-left",
+                      "transition-[border-color,background-color,color] duration-300",
+                      isActive
+                        ? "border-ng-line2 bg-white/[0.05] text-ng-fg"
+                        : "border-ng-line bg-white/[0.02] text-ng-fg2 hover:border-ng-line2",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "grid size-6 shrink-0 place-items-center rounded-ng-sm transition-colors duration-300",
+                        isActive ? node.accent.chip : "text-ng-faint",
+                      )}
+                    >
+                      <Icon name={node.icon} className="size-3.5" strokeWidth={1.7} />
+                    </span>
+                    <span className="text-[0.75rem] font-medium leading-tight">{node.label}</span>
+                  </button>
                 );
               })}
             </div>

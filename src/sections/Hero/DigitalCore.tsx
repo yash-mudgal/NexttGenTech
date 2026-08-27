@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { AdditiveBlending, BackSide, MathUtils, Vector3 } from "three";
@@ -451,42 +451,16 @@ function Scene({ lowPower }: { lowPower: boolean }) {
   );
 }
 
-/* ── Canvas host ─────────────────────────────────────────────────────────── */
+/* ── Scene export ────────────────────────────────────────────────────────────
+ * No <Canvas> here any more. The whole site shares one WebGL context (see
+ * components/3d/Stage), so this module exports the scene graph and SceneView
+ * mounts it into the shared canvas through a drei <View>. Camera, lighting and
+ * off-screen pausing are handled there.
+ * -------------------------------------------------------------------------- */
 
-export function DigitalCore({ className }: { className?: string }) {
+export function DigitalCoreScene() {
   const { lowPower } = useWebGL();
-  const hostRef = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(true);
-
-  // Stop rendering entirely once the composition leaves the viewport.
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisible(entry.isIntersecting),
-      { rootMargin: "120px" },
-    );
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={hostRef}
-      aria-hidden="true"
-      className={cn("relative mx-auto aspect-square w-full max-w-[34rem]", className)}
-    >
-      {/* Canvas sizes itself to this box — no absolute positioning needed. */}
-      <Canvas
-        frameloop={visible ? "always" : "never"}
-        dpr={[1, lowPower ? 1.25 : 2]}
-        gl={{ antialias: !lowPower, powerPreference: "high-performance" }}
-        camera={{ position: [0, 0, 9], fov: 45 }}
-      >
-        <Scene lowPower={lowPower} />
-      </Canvas>
-    </div>
-  );
+  return <Scene lowPower={lowPower} />;
 }
 
-export default DigitalCore;
+export default DigitalCoreScene;

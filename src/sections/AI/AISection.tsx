@@ -1,9 +1,18 @@
+import { lazy, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Section from "@/components/layout/Section";
 import SectionHeader from "@/components/ui/SectionHeader";
 import { Aura, GridBackdrop } from "@/components/ui/Aura";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/Reveal";
-import { aiCapabilities } from "@/data/ai";
-import NeuralCore from "./NeuralCore";
+import SceneView from "@/components/3d/SceneView";
+import { aiCapabilities, aiNodes } from "@/data/ai";
+import { useIsMobile } from "@/hooks";
+import { cn } from "@/lib/cn";
+import NeuralCore, { ENGINE_LABEL } from "./NeuralCore";
+
+/* Everything `three` stays behind this boundary so it never touches the
+ * initial bundle. SceneView renders it into the site's shared WebGL canvas. */
+const NeuralScene = lazy(() => import("./NeuralScene"));
 
 /**
  * How the team approaches AI work. Written as engineering practice, not as a
@@ -25,6 +34,18 @@ const approach: { label: string; body: string }[] = [
 ];
 
 export function AISection() {
+  const isMobile = useIsMobile();
+
+  /** Click/tap selection — survives the pointer leaving. */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Transient pointer/keyboard focus. */
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  const activeId = hoveredId ?? selectedId;
+  const activeNode = aiNodes.find((node) => node.id === activeId) ?? null;
+
+  const select = (id: string) => setSelectedId((current) => (current === id ? null : id));
+
   return (
     <Section
       id="ai"
@@ -98,7 +119,96 @@ export function AISection() {
 
         {/* ── Neural network visual ─────────────────────────────────────── */}
         <Reveal direction="up" delay={0.1} scale>
-          <NeuralCore />
+          <div className="w-full">
+            <SceneView
+              className="mx-auto aspect-square w-full max-w-[34rem]"
+              cameraPosition={[0, 0, 9.5]}
+              cameraFov={45}
+              fallback={<NeuralCore activeId={activeId} />}
+            >
+              <NeuralScene activeId={activeId} coreLabel={ENGINE_LABEL} compact={isMobile} />
+            </SceneView>
+
+            {/*
+              The accessible control surface. The network above is aria-hidden
+              and pointer-transparent — a canvas cannot be tabbed to — so every
+              layer is selected from here and the scene mirrors the result.
+            */}
+            <ul className="mt-5 flex flex-wrap justify-center gap-2">
+              {aiNodes.map((node) => {
+                const isActive = activeId === node.id;
+                return (
+                  <li key={node.id}>
+                    <button
+                      type="button"
+                      aria-pressed={selectedId === node.id}
+                      onPointerEnter={() => setHoveredId(node.id)}
+                      onPointerLeave={() => setHoveredId(null)}
+                      onFocus={() => setHoveredId(node.id)}
+                      onBlur={() => setHoveredId(null)}
+                      onClick={() => select(node.id)}
+                      className={cn(
+                        "flex min-h-11 items-center gap-2 rounded-full border px-3.5 py-2",
+                        "transition-[color,background-color,border-color] duration-300",
+                        isActive
+                          ? "border-ng-violet/50 bg-ng-violet/15 text-ng-fg"
+                          : "border-ng-line bg-white/[0.03] text-ng-fg2 hover:border-ng-line2",
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "size-1.5 shrink-0 rounded-full transition-colors duration-300",
+                          isActive ? "bg-ng-cyan" : "bg-ng-brand-soft",
+                        )}
+                      />
+                      <span className="text-[0.75rem] font-medium leading-tight">{node.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div
+              aria-live="polite"
+              className="mt-4 min-h-[5rem] rounded-ng border border-ng-line bg-ng-surface/60 px-4 py-3.5 sm:min-h-[4.5rem]"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                {activeNode ? (
+                  <motion.div
+                    key={activeNode.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <span className="font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-ng-violet">
+                      {activeNode.label}
+                    </span>
+                    <p className="mt-1.5 text-sm leading-relaxed text-ng-fg2">
+                      {activeNode.detail}
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.p
+                    key="idle"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.24 }}
+                    className="text-sm leading-relaxed text-ng-muted"
+                  >
+                    <span className="font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-ng-faint">
+                      Layers
+                    </span>
+                    <span className="mt-1.5 block">
+                      Select a layer to see the part it plays in a working system.
+                    </span>
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </Reveal>
       </div>
     </Section>

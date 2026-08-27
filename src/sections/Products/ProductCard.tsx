@@ -8,6 +8,7 @@
  * The tilt is dropped for coarse pointers and for reduced-motion visitors.
  * ========================================================================== */
 
+import { createContext, useContext, useEffect } from "react";
 import type { Product } from "@/data/products";
 import { productLinks } from "@/config/links";
 import { accentOf } from "@/lib/accent";
@@ -20,6 +21,16 @@ import DashboardPreview from "@/components/dashboard/DashboardPreview";
 
 /** How many module names are spelled out before the "+N more" tail. */
 const MODULE_PREVIEW = 5;
+
+/**
+ * Lets the section learn which platform is currently centred.
+ *
+ * The rail owns the active index (ProductSlider reads it back from an
+ * IntersectionObserver), so rather than thread a callback down through the
+ * slider, the card that is active announces itself. Optional by design: the
+ * card renders identically with no provider above it.
+ */
+export const ActiveProductContext = createContext<((product: Product) => void) | null>(null);
 
 export interface ProductCardProps {
   product: Product;
@@ -38,6 +49,11 @@ export function ProductCard({ product, index, total, active }: ProductCardProps)
 
   const preview = product.modules.slice(0, MODULE_PREVIEW);
   const remaining = product.modules.length - preview.length;
+
+  const reportActive = useContext(ActiveProductContext);
+  useEffect(() => {
+    if (active) reportActive?.(product);
+  }, [active, product, reportActive]);
 
   return (
     <article

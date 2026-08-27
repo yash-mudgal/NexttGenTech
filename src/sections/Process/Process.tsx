@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { lazy, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import type { MotionValue } from "framer-motion";
 
@@ -6,12 +6,17 @@ import Section from "@/components/layout/Section";
 import SectionHeader from "@/components/ui/SectionHeader";
 import Icon from "@/components/ui/Icon";
 import { Aura } from "@/components/ui/Aura";
+import SceneView from "@/components/3d/SceneView";
 import { company } from "@/config/company";
 import { usePrefersReducedMotion } from "@/hooks";
 import { accentOf } from "@/lib/accent";
 import type { AccentTheme } from "@/lib/accent";
 import type { Accent } from "@/data/products";
 import { cn } from "@/lib/cn";
+
+/* Everything `three` stays behind this boundary so it never reaches the initial
+ * bundle. SceneView renders it into the site's shared WebGL canvas. */
+const PipelineScene = lazy(() => import("./PipelineScene"));
 
 /** Accent rotation along the rail — blue, cyan, violet, repeat. */
 const rotation: readonly Accent[] = ["brand", "cyan", "violet"];
@@ -126,6 +131,110 @@ function ProcessStep({
   );
 }
 
+/* ── Pipeline banner fallback ────────────────────────────────────────────────
+ * Shown instead of the 3D pipeline on devices without WebGL and for visitors
+ * who have asked for reduced motion. It is the same idea in SVG — one path,
+ * seven gates, the blue → cyan → violet ramp — so those visitors get a designed
+ * graphic rather than an empty 20rem band.
+ * -------------------------------------------------------------------------- */
+
+/** Undulation of the pipe at each gate, mirroring the 3D path's control points. */
+const FALLBACK_WAVE = [-0.55, 0.55, -0.6, 0.3, 1.05, -0.25, 0.65];
+
+/** Node anchors in the 1200 × 260 SVG space, bracketed by a lead-in/lead-out. */
+const FALLBACK_ANCHORS: readonly (readonly [number, number])[] = [
+  [10, 125],
+  ...company.process.map((_, index) => {
+    const x = 100 + (index * 1000) / Math.max(TOTAL - 1, 1);
+    const y = 130 - FALLBACK_WAVE[index % FALLBACK_WAVE.length] * 48;
+    return [x, y] as const;
+  }),
+  [1190, 128],
+];
+
+/**
+ * Catmull-Rom through the anchors, emitted as cubic Béziers so the curve passes
+ * exactly through every node — a quadratic smoothing pass would leave the gates
+ * sitting slightly off their own pipe.
+ */
+function splinePath(points: readonly (readonly [number, number])[]): string {
+  let d = `M ${points[0][0]} ${points[0][1]}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const previous = points[Math.max(i - 1, 0)];
+    const start = points[i];
+    const end = points[i + 1];
+    const next = points[Math.min(i + 2, points.length - 1)];
+    const c1x = start[0] + (end[0] - previous[0]) / 6;
+    const c1y = start[1] + (end[1] - previous[1]) / 6;
+    const c2x = end[0] - (next[0] - start[0]) / 6;
+    const c2y = end[1] - (next[1] - start[1]) / 6;
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${end[0].toFixed(1)} ${end[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+const FALLBACK_PATH = splinePath(FALLBACK_ANCHORS);
+
+function PipelineFallback() {
+  return (
+    <svg
+      viewBox="0 0 1200 260"
+      aria-hidden="true"
+      focusable="false"
+      className="absolute inset-0 size-full"
+    >
+      <defs>
+        <linearGradient id="ng-pipeline-ramp" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--color-ng-brand)" />
+          <stop offset="50%" stopColor="var(--color-ng-cyan)" />
+          <stop offset="100%" stopColor="var(--color-ng-violet)" />
+        </linearGradient>
+        {/* Fades the pipe into the page at both ends, exactly as the tube's
+            vertex colours do in the 3D scene. */}
+        <linearGradient id="ng-pipeline-ends" x1="0" y1="0" x2="1" y2="0">
+          {/* White = visible in an SVG luminance mask; the transparent ends are
+              what dissolve the pipe into the page. */}
+          <stop offset="0%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="10%" stopColor="#fff" />
+          <stop offset="90%" stopColor="#fff" />
+          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+        <mask id="ng-pipeline-mask">
+          <rect x="0" y="0" width="1200" height="260" fill="url(#ng-pipeline-ends)" />
+        </mask>
+      </defs>
+
+      <g mask="url(#ng-pipeline-mask)">
+        {/* Soft casing, then the bright core, then a travelling dash. */}
+        <path d={FALLBACK_PATH} fill="none" stroke="url(#ng-pipeline-ramp)" strokeWidth="14" strokeOpacity="0.12" strokeLinecap="round" />
+        <path d={FALLBACK_PATH} fill="none" stroke="url(#ng-pipeline-ramp)" strokeWidth="2.5" strokeOpacity="0.85" strokeLinecap="round" />
+        <path
+          d={FALLBACK_PATH}
+          fill="none"
+          stroke="url(#ng-pipeline-ramp)"
+          strokeWidth="5"
+          strokeOpacity="0.65"
+          strokeLinecap="round"
+          strokeDasharray="14 150"
+          className="animate-ng-dash"
+        />
+
+        {company.process.map((item, index) => {
+          const [x, y] = FALLBACK_ANCHORS[index + 1];
+          const tone = accentOf(rotation[index % rotation.length]).hex;
+          return (
+            <g key={item.step}>
+              <circle cx={x} cy={y} r="22" fill={tone} opacity="0.1" />
+              <circle cx={x} cy={y} r="12" fill="none" stroke={tone} strokeWidth="1.25" strokeOpacity="0.55" />
+              <circle cx={x} cy={y} r="5" fill={tone} />
+            </g>
+          );
+        })}
+      </g>
+    </svg>
+  );
+}
+
 /* ── Section ─────────────────────────────────────────────────────────────── */
 
 export function Process() {
@@ -152,6 +261,26 @@ export function Process() {
         highlight="Problem To Platform"
         description="Every engagement runs through the same seven stages, from understanding the workflow to supporting the platform long after launch."
       />
+
+      {/* ── Pipeline banner ───────────────────────────────────────────────────
+          Its own reserved box. The shared canvas paints above section content,
+          so a scene may never sit behind copy — this band owns its height and
+          nothing else is laid out inside it.
+
+          `progress` is the same motion value that drives the rail fill below;
+          the scene reads it with `.get()` inside its frame loop, so the gates
+          light in step with the timeline without a single extra React render.
+          ------------------------------------------------------------------- */}
+      <div className="mt-10 sm:mt-12 lg:mt-14">
+        <SceneView
+          className="h-[15rem] w-full sm:h-[18rem] lg:h-[20rem]"
+          cameraPosition={[0, 0, 9]}
+          cameraFov={32}
+          fallback={<PipelineFallback />}
+        >
+          <PipelineScene progress={scrollYProgress} />
+        </SceneView>
+      </div>
 
       <div ref={railRef} className="relative mt-14 lg:mt-20">
         <div className="overflow-x-auto ng-no-scrollbar lg:snap-x lg:snap-proximity">

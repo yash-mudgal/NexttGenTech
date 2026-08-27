@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, useState } from "react";
 
 import Section from "@/components/layout/Section";
 import SectionHeader from "@/components/ui/SectionHeader";
@@ -6,20 +6,27 @@ import Tag from "@/components/ui/Tag";
 import TechGlyph from "@/components/ui/TechGlyph";
 import { Aura, GridBackdrop } from "@/components/ui/Aura";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/Reveal";
+import SceneView from "@/components/3d/SceneView";
 import { databases } from "@/data/technologies";
 import { cn } from "@/lib/cn";
 
 import DataArchitecture from "./DataArchitecture";
+
+/* Everything `three` stays behind this boundary so it never reaches the initial
+ * bundle. SceneView renders it into the site's shared WebGL canvas. */
+const DataStackScene = lazy(() => import("./DataStackScene"));
 
 function tinted(tint: string, percent: number): string {
   return `color-mix(in oklab, ${tint} ${percent}%, transparent)`;
 }
 
 /**
- * Data layer — the architecture diagram plus the engine detail cards.
+ * Data layer — the architecture stack plus the engine detail cards.
  *
  * The hovered-engine state lives here so a card can light up its matching
- * storage node in the diagram above it, and vice versa.
+ * storage node in the stack above it, and vice versa. The 3D scene reads that
+ * same state; the SVG diagram it replaces is the fallback for visitors without
+ * WebGL and for anyone who has asked for reduced motion.
  */
 export function DatabaseSection() {
   const [activeDatabase, setActiveDatabase] = useState<string | null>(null);
@@ -52,10 +59,26 @@ export function DatabaseSection() {
       />
 
       <Reveal direction="up" delay={0.1} className="mt-12 lg:mt-16">
-        <DataArchitecture
-          activeDatabase={activeDatabase}
-          onDatabaseHover={setActiveDatabase}
-        />
+        <SceneView
+          /*
+            `grid` + `min-h` rather than a fixed height. The scene needs a
+            definite box — the View stretches to fill this one as a grid item —
+            but the SVG fallback is a stack of real content that runs taller
+            than the scene box at narrow widths, and it has to be allowed to
+            grow instead of spilling over the cards below.
+          */
+          className="mx-auto grid w-full max-w-[48rem] min-h-[22rem] sm:min-h-[26rem] lg:min-h-[30rem]"
+          cameraPosition={[0, 0, 10]}
+          cameraFov={44}
+          fallback={
+            <DataArchitecture
+              activeDatabase={activeDatabase}
+              onDatabaseHover={setActiveDatabase}
+            />
+          }
+        >
+          <DataStackScene activeDatabase={activeDatabase} />
+        </SceneView>
       </Reveal>
 
       <Stagger

@@ -1,17 +1,53 @@
-import { useRef } from "react";
+import { lazy, useRef } from "react";
 import type { CSSProperties } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Section from "@/components/layout/Section";
 import Button from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
+import SceneView from "@/components/3d/SceneView";
 import { sectionIds } from "@/config/links";
 import { usePointer, usePrefersReducedMotion } from "@/hooks";
 import { cn } from "@/lib/cn";
 
-/* ── Backdrop geometry ───────────────────────────────────────────────────────
- * A perspective grid floor receding to a horizon, two slow auras and three
- * parallax layers of glass shards. All CSS and SVG — the hero owns the WebGL
- * budget, so nothing here touches three.js.
+/* Everything `three` stays behind this boundary so it never reaches the initial
+ * bundle. SceneView renders it into the site's shared WebGL canvas. */
+const CTAScene = lazy(() => import("./CTAScene"));
+
+/* ── Ambience ────────────────────────────────────────────────────────────────
+ * Two slow auras behind the slab. This is the only decorative layer that sits
+ * *behind* the copy, so it stays pure CSS at 12–15% opacity — the shared canvas
+ * paints above section content and could never be used here without dimming the
+ * headline.
+ * -------------------------------------------------------------------------- */
+
+function CTAAmbience() {
+  const reducedMotion = usePrefersReducedMotion();
+
+  return (
+    <div className="absolute inset-0">
+      <motion.div
+        className="ng-aura-brand absolute left-[8%] top-[4%] size-[34rem] rounded-full opacity-[0.15] blur-[110px]"
+        animate={reducedMotion ? undefined : { x: [0, 34, 0], y: [0, -20, 0] }}
+        transition={
+          reducedMotion ? undefined : { duration: 28, repeat: Infinity, ease: "easeInOut" }
+        }
+      />
+      <motion.div
+        className="ng-aura-violet absolute bottom-[2%] right-[4%] size-[30rem] rounded-full opacity-[0.12] blur-[110px]"
+        animate={reducedMotion ? undefined : { x: [0, -26, 0], y: [0, 22, 0] }}
+        transition={
+          reducedMotion ? undefined : { duration: 36, repeat: Infinity, ease: "easeInOut" }
+        }
+      />
+    </div>
+  );
+}
+
+/* ── Closing-band fallback ───────────────────────────────────────────────────
+ * The CSS composition that used to be the whole backdrop: a perspective grid
+ * floor receding to a horizon and three parallax layers of glass shards. It now
+ * serves the visitors the WebGL scene can't — no WebGL, or reduced motion — and
+ * it fills exactly the same band the 3D floor occupies.
  * -------------------------------------------------------------------------- */
 
 /** Fades the floor out at the horizon and again as it runs past the viewer. */
@@ -19,7 +55,7 @@ const FLOOR_MASK =
   "linear-gradient(to top, transparent 0%, #000 20%, #000 58%, transparent 94%)";
 
 interface Shard {
-  /** Position as a percentage of the backdrop box. */
+  /** Position as a percentage of the band. */
   left: number;
   top: number;
   /** Edge length in px. */
@@ -65,7 +101,7 @@ const shardTones: Record<Shard["tone"], string> = {
   violet: "from-ng-violet/25",
 };
 
-function CTABackdrop() {
+function CTABandFallback() {
   const ref = useRef<HTMLDivElement>(null);
   const pointer = usePointer();
   const reducedMotion = usePrefersReducedMotion();
@@ -76,19 +112,21 @@ function CTABackdrop() {
   });
 
   // One transform per depth layer — hooks can't live inside the render loop.
-  const floorY = useTransform(scrollYProgress, [0, 1], ["-4%", "6%"]);
-  const farY = useTransform(scrollYProgress, [0, 1], [34, -34]);
-  const midY = useTransform(scrollYProgress, [0, 1], [64, -64]);
-  const nearY = useTransform(scrollYProgress, [0, 1], [104, -104]);
+  // Travel is shorter than it was across the full section: the band is a
+  // fraction of the height, so the same numbers would read as a lurch.
+  const floorY = useTransform(scrollYProgress, [0, 1], ["-3%", "4%"]);
+  const farY = useTransform(scrollYProgress, [0, 1], [18, -18]);
+  const midY = useTransform(scrollYProgress, [0, 1], [34, -34]);
+  const nearY = useTransform(scrollYProgress, [0, 1], [56, -56]);
   const layerY = [farY, midY, nearY];
 
   /** Pointer parallax strength per layer, in px. */
   const layerPull = [8, 17, 30];
 
   return (
-    <div ref={ref} className="absolute inset-0">
+    <div ref={ref} className="absolute inset-0 overflow-hidden">
       {/* Perspective grid floor */}
-      <div className="ng-perspective absolute inset-x-[-30%] bottom-[-14%] h-[64%]">
+      <div className="ng-perspective absolute inset-x-[-20%] bottom-[-10%] h-[96%]">
         <motion.div
           className="ng-grid absolute inset-0 origin-bottom opacity-60"
           style={{
@@ -101,28 +139,8 @@ function CTABackdrop() {
       </div>
 
       {/* Horizon */}
-      <div className="absolute inset-x-[12%] top-[52%] h-px bg-gradient-to-r from-transparent via-ng-cyan/25 to-transparent" />
-      <div className="absolute inset-x-[22%] top-[52%] h-24 -translate-y-full bg-gradient-to-t from-ng-brand/[0.09] to-transparent blur-2xl" />
-
-      {/* Slow-drifting auras */}
-      <motion.div
-        className="ng-aura-brand absolute left-[8%] top-[4%] size-[34rem] rounded-full opacity-[0.15] blur-[110px]"
-        animate={reducedMotion ? undefined : { x: [0, 34, 0], y: [0, -20, 0] }}
-        transition={
-          reducedMotion
-            ? undefined
-            : { duration: 28, repeat: Infinity, ease: "easeInOut" }
-        }
-      />
-      <motion.div
-        className="ng-aura-violet absolute right-[4%] bottom-[2%] size-[30rem] rounded-full opacity-[0.12] blur-[110px]"
-        animate={reducedMotion ? undefined : { x: [0, -26, 0], y: [0, 22, 0] }}
-        transition={
-          reducedMotion
-            ? undefined
-            : { duration: 36, repeat: Infinity, ease: "easeInOut" }
-        }
-      />
+      <div className="absolute inset-x-[12%] top-[46%] h-px bg-gradient-to-r from-transparent via-ng-cyan/25 to-transparent" />
+      <div className="absolute inset-x-[22%] top-[46%] h-24 -translate-y-full bg-gradient-to-t from-ng-brand/[0.09] to-transparent blur-2xl" />
 
       {/* Glass shards */}
       {shardLayers.map((shards, depth) => (
@@ -180,16 +198,21 @@ const hairline: CSSProperties = {
 
 /**
  * The closing argument — the last thing a visitor reads before the contact
- * form. One slab, one headline, two routes forward.
+ * form. One slab, one headline, two routes forward, standing on a grid floor
+ * that runs off towards the horizon.
  */
 export function CTASection() {
+  const bandRef = useRef<HTMLDivElement>(null);
+
+  // Drives the scene's camera drift. Passed to the scene as a motion value and
+  // read inside its frame loop, so scrolling never re-renders this section.
+  const { scrollYProgress } = useScroll({
+    target: bandRef,
+    offset: ["start end", "end start"],
+  });
+
   return (
-    <Section
-      label="Start a project"
-      width="default"
-      spacing="lg"
-      backdrop={<CTABackdrop />}
-    >
+    <Section label="Start a project" width="default" spacing="lg" backdrop={<CTAAmbience />}>
       <Reveal direction="up" scale>
         <div className="ng-glass relative overflow-hidden rounded-ng-xl px-6 py-14 text-center shadow-ng-lift sm:px-12 sm:py-18 lg:py-20">
           <span
@@ -241,6 +264,36 @@ export function CTASection() {
           </div>
         </div>
       </Reveal>
+
+      {/* ── Closing band ──────────────────────────────────────────────────────
+          The scene's own reserved box, below the slab and never behind it: the
+          shared canvas is fixed above section content, so any geometry drawn
+          over the heading or the buttons would cost real contrast on the last
+          thing a prospective client reads.
+
+          Full-bleed, because the floor's left and right edges have to be cut by
+          the viewport rather than land as two vertical seams mid-page. The
+          negative bottom margin lets it run into the section's own padding, so
+          the floor dissolves at the boundary with the contact form instead of
+          stopping in mid-air.
+          ------------------------------------------------------------------ */}
+      <div
+        ref={bandRef}
+        className={cn(
+          "relative left-1/2 w-screen -translate-x-1/2",
+          "mt-12 sm:mt-16 lg:mt-20",
+          "-mb-16 sm:-mb-24 lg:-mb-32",
+        )}
+      >
+        <SceneView
+          className="h-[13rem] w-full sm:h-[16rem] lg:h-[19rem]"
+          cameraPosition={[0, 1.3, 6]}
+          cameraFov={45}
+          fallback={<CTABandFallback />}
+        >
+          <CTAScene progress={scrollYProgress} />
+        </SceneView>
+      </div>
     </Section>
   );
 }

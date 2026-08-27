@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { lazy } from "react";
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { ChevronDown } from "lucide-react";
@@ -7,13 +7,13 @@ import Button from "@/components/ui/Button";
 import { Aura, GridBackdrop } from "@/components/ui/Aura";
 import { company } from "@/config/company";
 import { sectionIds } from "@/config/links";
-import { useWebGL } from "@/hooks";
+import SceneView from "@/components/3d/SceneView";
 import HeroTerminal from "./HeroTerminal";
 import DigitalCoreFallback from "./DigitalCoreFallback";
 
-/* The WebGL scene is the only thing in the hero that must not touch the initial
- * bundle — everything `three` lives behind this boundary. */
-const DigitalCore = lazy(() => import("./DigitalCore"));
+/* Everything `three` stays behind this boundary so it never touches the
+ * initial bundle. SceneView renders it into the site's shared WebGL canvas. */
+const DigitalCoreScene = lazy(() => import("./DigitalCore"));
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -34,8 +34,6 @@ const TAGLINE_LEAD = TAGLINE_WORDS.slice(0, -2).join(" ");
 const TAGLINE_ACCENT = TAGLINE_WORDS.slice(-2).join(" ");
 
 export function Hero() {
-  const { enabled } = useWebGL();
-
   return (
     <Section
       id={sectionIds.home}
@@ -123,13 +121,14 @@ export function Hero() {
           className="relative"
         >
           <div className="relative mx-auto w-full max-w-[34rem] lg:max-w-none">
-            {enabled ? (
-              <Suspense fallback={<DigitalCoreFallback />}>
-                <DigitalCore />
-              </Suspense>
-            ) : (
-              <DigitalCoreFallback />
-            )}
+            <SceneView
+              className="mx-auto aspect-square w-full max-w-[34rem]"
+              cameraPosition={[0, 0, 9]}
+              cameraFov={45}
+              fallback={<DigitalCoreFallback />}
+            >
+              <DigitalCoreScene />
+            </SceneView>
           </div>
 
           {/* Overlaps the core's lower edge so the pair reads as one object. */}
