@@ -1,0 +1,13 @@
+{
+  "name": "NextGen Software Technologies",
+  "short_name": "NextGen",
+  "description": "ERP, CRM, HRMS, AI, SaaS, cloud and custom software solutions.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#04060c",
+  "theme_color": "#04060c",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

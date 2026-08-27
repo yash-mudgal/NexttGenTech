@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Single-page site: every navigation target is an in-page anchor, so search
+  engines only need the one canonical URL. Add <url> entries here if the site
+  ever grows real routes.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.nextgensoftwaretechnologies.com/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

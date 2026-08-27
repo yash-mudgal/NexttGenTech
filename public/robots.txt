@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Update the origin to match src/config/site.ts before deploying.
+Sitemap: https://www.nextgensoftwaretechnologies.com/sitemap.xml

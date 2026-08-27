@@ -1,0 +1,431 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   NEXTGEN SOFTWARE TECHNOLOGIES — DESIGN SYSTEM
+   ----------------------------------------------------------------------------
+   Every token below is exposed to Tailwind as a utility. All custom tokens are
+   prefixed `ng-` so they never collide with Tailwind's built-in palette.
+
+     bg-ng-ink        text-ng-fg        border-ng-line     ring-ng-brand
+     bg-ng-surface    text-ng-muted     shadow-ng-glow     font-display
+     bg-ng-brand      text-ng-cyan      rounded-ng-card    font-mono
+
+   Do not hardcode hex values in components — use these tokens.
+   ========================================================================== */
+
+@theme {
+  /* — Surfaces ———————————————————————————————————————————————— */
+  --color-ng-ink: #04060c; /* page background        */
+  --color-ng-void: #010206; /* deepest wells          */
+  --color-ng-surface: #080d18; /* raised panels          */
+  --color-ng-surface2: #0d1424; /* cards on panels        */
+  --color-ng-surface3: #131b2e; /* hovered / active       */
+  --color-ng-line: #1b2440; /* hairline borders       */
+  --color-ng-line2: #26314f; /* emphasised borders     */
+
+  /* — Brand (sampled from the NG logo mark) —————————————————————— */
+  --color-ng-brand: #2563eb;
+  --color-ng-brand-deep: #1a45d8;
+  --color-ng-brand-soft: #5b8bff;
+  --color-ng-cyan: #22d3ee;
+  --color-ng-cyan-deep: #0ea5c9;
+  --color-ng-violet: #8b5cf6;
+  --color-ng-violet-deep: #6d3fe0;
+
+  /* — Semantic accents ——————————————————————————————————————— */
+  --color-ng-emerald: #34d399;
+  --color-ng-amber: #fbbf24;
+  --color-ng-rose: #fb7185;
+
+  /* — Type ————————————————————————————————————————————————— */
+  --color-ng-fg: #e9eefb; /* primary text           */
+  --color-ng-fg2: #b9c4dc; /* secondary text         */
+  --color-ng-muted: #7e8ca8; /* muted / captions       */
+  --color-ng-faint: #4e5a75; /* dividers, watermarks   */
+
+  --font-display: "Sora Variable", "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SFMono-Regular",
+    Menlo, monospace;
+
+  /* — Radii ———————————————————————————————————————————————— */
+  --radius-ng-sm: 0.5rem;
+  --radius-ng: 0.875rem;
+  --radius-ng-card: 1.25rem;
+  --radius-ng-lg: 1.75rem;
+  --radius-ng-xl: 2.25rem;
+
+  /* — Elevation ————————————————————————————————————————————— */
+  --shadow-ng-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-ng-card: 0 12px 32px -12px rgb(0 0 0 / 0.7), 0 2px 8px -2px rgb(0 0 0 / 0.5);
+  --shadow-ng-lift: 0 28px 64px -20px rgb(0 0 0 / 0.85), 0 8px 20px -8px rgb(0 0 0 / 0.6);
+  --shadow-ng-glow: 0 0 0 1px rgb(37 99 235 / 0.25), 0 18px 60px -22px rgb(37 99 235 / 0.65);
+  --shadow-ng-glow-cyan: 0 0 0 1px rgb(34 211 238 / 0.22), 0 18px 60px -22px rgb(34 211 238 / 0.5);
+
+  /* — Motion ———————————————————————————————————————————————— */
+  --ease-ng: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-ng-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --animate-ng-marquee: ng-marquee 42s linear infinite;
+  --animate-ng-marquee-slow: ng-marquee 68s linear infinite;
+  --animate-ng-float: ng-float 7s var(--ease-ng-in-out) infinite;
+  --animate-ng-pulse-ring: ng-pulse-ring 3.2s var(--ease-ng-in-out) infinite;
+  --animate-ng-dash: ng-dash 2.4s linear infinite;
+  --animate-ng-shimmer: ng-shimmer 2.6s linear infinite;
+  --animate-ng-caret: ng-caret 1.05s steps(2, start) infinite;
+  --animate-ng-scan: ng-scan 5.5s linear infinite;
+  --animate-ng-spin-slow: ng-spin 26s linear infinite;
+  --animate-ng-orbit: ng-orbit 30s linear infinite;
+}
+
+@keyframes ng-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@keyframes ng-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+@keyframes ng-pulse-ring {
+  0% {
+    transform: scale(0.86);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+@keyframes ng-dash {
+  to {
+    stroke-dashoffset: -220;
+  }
+}
+@keyframes ng-shimmer {
+  from {
+    background-position: -180% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+@keyframes ng-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ng-scan {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(1200%);
+    opacity: 0;
+  }
+}
+@keyframes ng-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ng-orbit {
+  from {
+    transform: rotate(0deg) translateX(var(--ng-orbit-r, 120px)) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(var(--ng-orbit-r, 120px)) rotate(-360deg);
+  }
+}
+
+/* ============================================================================
+   BASE
+   ========================================================================== */
+
+@layer base {
+  * {
+    border-color: var(--color-ng-line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Sticky navbar height + breathing room, so anchors never hide behind it. */
+    scroll-padding-top: 6.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-ng-ink);
+    color: var(--color-ng-fg);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    font-family: var(--font-display);
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-ng-brand) 45%, transparent);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ng-cyan);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Custom scrollbar — reads as "developer tool", stays subtle. */
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-ng-void);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-ng-line2);
+    border: 3px solid var(--color-ng-void);
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ng-brand);
+  }
+
+  html {
+    scrollbar-color: var(--color-ng-line2) var(--color-ng-void);
+  }
+}
+
+/* ============================================================================
+   COMPONENT PRIMITIVES
+   Shared visual language. Prefer these over re-inventing gradients per section.
+   ========================================================================== */
+
+@layer components {
+  /* Frosted panel used by cards, the navbar and dashboard chrome. */
+  .ng-glass {
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.045) 0%,
+      rgb(255 255 255 / 0.015) 100%
+    );
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid var(--color-ng-line);
+  }
+
+  /* Card with a gradient hairline that lights up on hover. */
+  .ng-card {
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(180deg, var(--color-ng-surface2) 0%, var(--color-ng-surface) 100%);
+    border: 1px solid var(--color-ng-line);
+    border-radius: var(--radius-ng-card);
+    transition:
+      transform 0.45s var(--ease-ng),
+      border-color 0.45s var(--ease-ng),
+      box-shadow 0.45s var(--ease-ng);
+  }
+  .ng-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      140deg,
+      color-mix(in oklab, var(--color-ng-brand) 70%, transparent),
+      color-mix(in oklab, var(--color-ng-cyan) 45%, transparent) 45%,
+      transparent 70%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.45s var(--ease-ng);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .ng-card:hover::before,
+  .ng-card:focus-within::before {
+    opacity: 1;
+  }
+
+  /* Text that carries the logo gradient. */
+  .ng-gradient-text {
+    background: linear-gradient(
+      100deg,
+      var(--color-ng-brand-soft) 0%,
+      var(--color-ng-cyan) 55%,
+      var(--color-ng-violet) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Blueprint grid — the "developer surface" backdrop. */
+  .ng-grid {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .ng-grid-fine {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  /* Fades a decorative layer out towards the edges. */
+  .ng-fade-edges {
+    -webkit-mask-image: radial-gradient(ellipse 68% 62% at 50% 42%, #000 35%, transparent 100%);
+    mask-image: radial-gradient(ellipse 68% 62% at 50% 42%, #000 35%, transparent 100%);
+  }
+  .ng-fade-x {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  }
+  .ng-fade-b {
+    -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+  }
+
+  /* Small uppercase label above section headings. */
+  .ng-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-ng-cyan);
+  }
+
+  /* Inline pill used for feature/module tags. */
+  .ng-tag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid var(--color-ng-line);
+    background: rgb(255 255 255 / 0.03);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1.1rem;
+    color: var(--color-ng-fg2);
+    white-space: nowrap;
+  }
+
+  /* Marquee / slider rails that must never show a scrollbar. */
+  .ng-no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .ng-no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* Ambient radial light. Pair with a positioned absolute div. */
+  .ng-aura-brand {
+    background: radial-gradient(
+      circle at center,
+      color-mix(in oklab, var(--color-ng-brand) 55%, transparent) 0%,
+      transparent 68%
+    );
+  }
+  .ng-aura-cyan {
+    background: radial-gradient(
+      circle at center,
+      color-mix(in oklab, var(--color-ng-cyan) 45%, transparent) 0%,
+      transparent 68%
+    );
+  }
+  .ng-aura-violet {
+    background: radial-gradient(
+      circle at center,
+      color-mix(in oklab, var(--color-ng-violet) 48%, transparent) 0%,
+      transparent 68%
+    );
+  }
+  .ng-perspective {
+    perspective: 1200px;
+  }
+  .ng-preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .ng-shimmer-bg {
+    background-image: linear-gradient(
+      100deg,
+      transparent 25%,
+      rgb(255 255 255 / 0.14) 50%,
+      transparent 75%
+    );
+    background-size: 220% 100%;
+  }
+}
+
+/* ============================================================================
+   REDUCED MOTION
+   Animation is decoration here — when the user opts out, everything still
+   renders in its final state.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
