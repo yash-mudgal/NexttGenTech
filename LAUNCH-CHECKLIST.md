@@ -23,40 +23,43 @@ verified against the source and the deployed bundle. Change them anyway.
 
 ---
 
-## 🟡 Enquiry email — half done
+## ✅ Enquiry email — done and delivering
 
-Enquiries **do** reach `yash.mudgal@nexttgentech.com` today, but they arrive
-*from FormSubmit*, a third-party relay, and only once activated.
+Finished 28 August 2026. Enquiries from the live site arrive at
+`yash.mudgal@nexttgentech.com` **from `info@nexttgentech.com`**, DKIM-signed,
+with Reply-To set to the visitor so hitting reply answers them directly.
 
-### Right now
+Confirmed by real submissions landing in the inbox, not just a 200 response.
 
-- [ ] **Activate FormSubmit.** Send one enquiry from
-      <https://nexttgentech.com/#contact>, then click the confirmation link
-      FormSubmit emails to `yash.mudgal@nexttgentech.com`.
-      **Until this is clicked, nothing is delivered.** One time only.
+- [x] Resend account — workspace `nexttgentech`
+- [x] Domain `nexttgentech.com` added and **Verified** (region ap-northeast-1)
+- [x] 3 DNS records at GoDaddy, confirmed live against the authoritative
+      nameserver `ns59.domaincontrol.com`. Zoho's MX on `@` verified unchanged.
+- [x] `RESEND_API_KEY` stored as an encrypted Cloudflare Worker secret
+- [x] Worker deployed —
+      `nexttgentech-enquiry.nexttgentech-enquiry-worker.workers.dev`
+- [x] `workerEndpoint` set in `src/config/links.ts`, built and pushed
 
-### To send as `info@nexttgentech.com` instead
+### If it ever breaks
 
-The Cloudflare Worker in [`worker/`](worker/README.md) is written, tested and
-committed. It just needs your accounts. Full walkthrough is in that README.
+Emptying `workerEndpoint` in `src/config/links.ts` is the kill switch — the
+form drops straight back to the FormSubmit relay and keeps delivering. That
+fallback needs a one-time activation click if it's ever actually used.
 
-- [x] Sign up at <https://resend.com> — done, workspace `nexttgentech`
-- [x] Add the domain `nexttgentech.com` — done, region Tokyo (ap-northeast-1)
-- [x] **Add the 3 DNS records below at GoDaddy** — done 28 Aug 2026, all three
-      confirmed live against the authoritative nameserver `ns59.domaincontrol.com`.
-      Zoho's MX records on `@` were verified unchanged afterwards.
-- [ ] Wait for Resend to flip the domain to *Verified* (it polls on its own)
-- [ ] Create an API key with *Sending access*
-- [ ] Deploy:
-      ```bash
-      cd worker
-      npm install
-      npx wrangler login
-      npx wrangler secret put RESEND_API_KEY
-      npm run deploy
-      ```
-- [ ] Paste the printed URL into `workerEndpoint` — `src/config/links.ts:70`
-- [ ] Commit and push. Done.
+Watch the Worker live: `cd worker && npm run tail`
+Delivery logs: <https://resend.com/emails>
+
+### 🔑 Rotate the API key if it was ever pasted anywhere
+
+A Resend key can send mail as this domain until revoked. If one is ever pasted
+into a chat, a ticket or a commit, delete it at <https://resend.com/api-keys>,
+create a replacement, and re-run:
+
+```bash
+cd worker && npx wrangler secret put RESEND_API_KEY
+```
+
+No redeploy needed — the Worker picks up the new secret immediately.
 
 ### The exact DNS records
 
