@@ -47,8 +47,33 @@ if ($who -match "not authenticated") {
     Ok "Already signed in."
 }
 
-# ── 3. Resend API key ────────────────────────────────────────────────────────
-Step 3 "Storing the Resend API key..."
+# ── 3. Deploy ────────────────────────────────────────────────────────────────
+# Deploy comes BEFORE the secret on purpose: `wrangler secret put` targets an
+# existing Worker, and fails with "Worker not found" if nothing has been
+# deployed yet. The first deploy creates it; the send path simply returns 502
+# until the key is added in the next step.
+Step 3 "Deploying the Worker..."
+$deploy = npx wrangler deploy 2>&1 | Out-String
+Write-Host $deploy
+
+if ($deploy -match "verify your email address") {
+    Write-Host ""
+    Warn "Cloudflare needs your email address verified before it will run Workers."
+    Warn "Check the inbox for yash.mudgal@nexttgentech.com and click their"
+    Warn "verification link, then run this script again."
+    exit 1
+}
+if ($deploy -match "register a workers.dev subdomain") {
+    Write-Host ""
+    Warn "You need to pick a workers.dev subdomain once (any name is fine):"
+    Warn "https://dash.cloudflare.com/$($env:CLOUDFLARE_ACCOUNT_ID)/workers/subdomain"
+    Warn "Then run this script again."
+}
+if ($LASTEXITCODE -ne 0) { throw "Deploy failed - see the output above." }
+Ok "Deployed."
+
+# ── 4. Resend API key ────────────────────────────────────────────────────────
+Step 4 "Storing the Resend API key..."
 Write-Host ""
 Write-Host "    Get one at https://resend.com/api-keys" -ForegroundColor Gray
 Write-Host "    Create -> permission 'Sending access' -> copy the key (starts 're_')." -ForegroundColor Gray
@@ -58,12 +83,6 @@ Write-Host ""
 npx wrangler secret put RESEND_API_KEY
 if ($LASTEXITCODE -ne 0) { throw "Storing the secret failed." }
 Ok "Stored."
-
-# ── 4. Deploy ────────────────────────────────────────────────────────────────
-Step 4 "Deploying the Worker..."
-$deploy = npx wrangler deploy 2>&1 | Out-String
-Write-Host $deploy
-if ($LASTEXITCODE -ne 0) { throw "Deploy failed." }
 
 # ── 5. Report the URL ────────────────────────────────────────────────────────
 $url = ([regex]::Match($deploy, "https://[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev")).Value
