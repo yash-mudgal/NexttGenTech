@@ -44,10 +44,11 @@ export const company = {
     phone: "+91 96229 68107",
     /** Digits only — used to build the tel: href. */
     phoneHref: "+919622968107",
-    // «REPLACE» digits only, e.g. "919622968107". Empty hides the button.
-    // Left unset because it hasn't been confirmed that this number is on
-    // WhatsApp — a dead wa.me link is worse than no button.
-    whatsapp: "",
+    /**
+     * Digits only, with country code and no "+" — this is what wa.me expects.
+     * Empty hides the button entirely.
+     */
+    whatsapp: "919622968107",
     address: {
       line1: "Registered Office", // «REPLACE»
       line2: "City, State", // «REPLACE»
