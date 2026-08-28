@@ -55,19 +55,16 @@ export const contactForm = {
   mode: "worker" as "mailto" | "relay" | "worker",
 
   /**
-   * Our Cloudflare Worker's URL. Empty until it has been deployed.
+   * Our Cloudflare Worker (source in /worker). Deployed 28 Aug 2026.
    *
-   * ⚠️  While this is empty, `mode: "worker"` automatically falls back to the
-   *     relay below, so the live form keeps delivering enquiries either way.
-   *     Paste the URL `wrangler deploy` prints and the switch happens on the
-   *     next build — no other file needs touching.
+   * Emptying this string is the kill switch: `mode: "worker"` falls straight
+   * back to the relay below, so the form keeps delivering even if the Worker
+   * is ever taken down. No other file needs touching.
    *
-   *     e.g. "https://nexttgentech-enquiry.<subdomain>.workers.dev"
-   *
-   * Setup, including the DNS records that authorise us to send as our own
-   * domain, is written out step by step in worker/README.md.
+   * Redeploy with `cd worker && npm run deploy`. Setup and the DNS records
+   * that authorise us to send as our own domain are in worker/README.md.
    */
-  workerEndpoint: "", // «REPLACE» with the deployed Worker URL
+  workerEndpoint: "https://nexttgentech-enquiry.nexttgentech-enquiry-worker.workers.dev",
 
   /**
    * Fallback relay, used while `workerEndpoint` is empty.
