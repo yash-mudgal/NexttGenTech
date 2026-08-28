@@ -41,7 +41,7 @@ export function Industries() {
     >
       <SectionHeader
         align="center"
-        eyebrow="12 — Industries"
+        eyebrow="11 — Industries"
         title="Software Shaped By"
         highlight="The Work It Supports"
         description="Eleven verticals we build for, each mapped to the platforms that carry its everyday operational load."

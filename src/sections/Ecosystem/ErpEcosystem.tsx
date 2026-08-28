@@ -479,7 +479,7 @@ export function ErpEcosystem() {
     >
       <SectionHeader
         align="center"
-        eyebrow="02 — Connected Platform"
+        eyebrow="03 — Connected Platform"
         title="One Ecosystem,"
         highlight="Every System Connected"
         description="The platforms share a common core — the same data model, the same identity and permissions, the same reporting layer. A school, a hospital or a growing business ends up running one connected system rather than six tools that only agree on the login screen."

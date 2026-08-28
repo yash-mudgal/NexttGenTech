@@ -31,7 +31,7 @@ export function Leadership() {
       }
     >
       <SectionHeader
-        eyebrow="16 — Leadership"
+        eyebrow="15 — Leadership"
         title="The People"
         highlight="Behind NextGen"
         description="Engineering vision. Product thinking. Business understanding."

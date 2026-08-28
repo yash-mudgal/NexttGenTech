@@ -34,7 +34,7 @@ export function WhyNextGen() {
     >
       <SectionHeader
         align="center"
-        eyebrow="13 — Why NextGen"
+        eyebrow="12 — Why NextGen"
         title="Built Like a Product,"
         highlight="Not a Project"
         description="Six engineering principles shape every platform we ship — from the data model underneath to the screen a store manager opens on a Monday morning."

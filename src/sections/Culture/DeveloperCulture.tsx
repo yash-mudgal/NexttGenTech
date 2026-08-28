@@ -109,7 +109,7 @@ export function DeveloperCulture() {
           <Reveal direction="up" duration={0.5}>
             <span className="ng-eyebrow mb-4">
               <span aria-hidden="true" className="h-px w-6 bg-gradient-to-r from-transparent to-ng-cyan" />
-              15 — Engineering Culture
+              14 — Engineering Culture
             </span>
           </Reveal>
 
@@ -191,7 +191,16 @@ export function DeveloperCulture() {
 
                 <div aria-hidden="true" className="overflow-x-auto ng-no-scrollbar py-4">
                   <motion.div
-                    className="min-w-max"
+                    /*
+                     * `min-w-max` sizes this to the longest line so the block
+                     * scrolls horizontally. On a phone that is the wrong trade:
+                     * the widest line is ~70 characters against roughly 37 that
+                     * fit, and `ng-no-scrollbar` hides the scrollbar, so the
+                     * code simply looked chopped off with no hint it could be
+                     * swiped. Below `sm` it shrinks to the container instead and
+                     * the lines wrap.
+                     */
+                    className="min-w-0 sm:min-w-max"
                     variants={{ show: { transition: { staggerChildren: 0.05, delayChildren: 0.15 } } }}
                     initial={reducedMotion ? "show" : "hidden"}
                     whileInView="show"
@@ -216,7 +225,14 @@ export function DeveloperCulture() {
                             {line + 1}
                           </span>
 
-                          <code className="whitespace-pre pr-6 font-mono text-[0.75rem] leading-7 sm:text-[0.8125rem]">
+                          {/*
+                            `min-w-0` is what actually lets this wrap: a flex
+                            item refuses to shrink below its content width
+                            without it, so the wrapping rules alone would be
+                            ignored. Wrapping happens at the spaces after each
+                            comma, which is where a formatter would break too.
+                          */}
+                          <code className="min-w-0 flex-1 whitespace-pre-wrap pr-4 font-mono text-[0.75rem] leading-7 sm:flex-none sm:whitespace-pre sm:pr-6 sm:text-[0.8125rem]">
                             {tokens.map((token, index) => (
                               <span key={index} className={token.className}>
                                 {token.text}

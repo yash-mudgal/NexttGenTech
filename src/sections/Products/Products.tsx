@@ -107,7 +107,7 @@ export function Products() {
     >
       <SectionHeader
         align="left"
-        eyebrow="03 — Products"
+        eyebrow="02 — Products"
         title="Platforms Ready To"
         highlight="Run Your Operation"
         description="Six platforms, each with its own module set, portals and dashboards — education, healthcare and hospitality ERP alongside CRM, HRMS and inventory control."

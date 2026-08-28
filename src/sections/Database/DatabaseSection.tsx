@@ -52,7 +52,7 @@ export function DatabaseSection() {
       <SectionHeader
         align="left"
         headingId="data-heading"
-        eyebrow="09 — Data"
+        eyebrow="08 — Data"
         title="Data That"
         highlight="Powers Your Business"
         description="We model the data around how the business actually operates — its entities, its rules and its reporting — before a single screen gets built."

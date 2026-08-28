@@ -42,7 +42,7 @@ export function CloudSection() {
       <SectionHeader
         align="center"
         headingId="cloud-heading"
-        eyebrow="10 — Cloud & DevOps"
+        eyebrow="09 — Cloud & DevOps"
         title="Built To Ship,"
         highlight="Built To Scale"
         description="Containerised services, automated pipelines and monitored deployments — so releasing a change is routine rather than an event."

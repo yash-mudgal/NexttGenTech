@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import type { RefObject } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import type { MouseEvent, RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { Mail, Phone } from "lucide-react";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import Button from "@/components/ui/Button";
 import { navCta, navItems } from "@/config/navigation";
 import { company } from "@/config/company";
+import { usePrefersReducedMotion } from "@/hooks/useMediaQuery";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -43,6 +44,53 @@ export interface MobileMenuProps {
  */
 export function MobileMenu({ id, open, onClose, activeId, triggerRef }: MobileMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = usePrefersReducedMotion();
+
+  /**
+   * Navigate to a section from inside the drawer.
+   *
+   * This cannot be left to the browser. While the drawer is open the body is
+   * locked with `overflow: hidden`, and a plain anchor click hands the jump to
+   * the browser *while that lock is still applied* — the scroll is discarded,
+   * the URL updates, and the page never moves. That is the whole bug: every
+   * link in the mobile menu silently did nothing but close the drawer.
+   *
+   * So: close first, then scroll once the lock has actually been released.
+   * Two frames, because the release happens in React's commit and the first
+   * frame can still land inside it.
+   */
+  const goTo = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+      // Let modified clicks (new tab, download) and non-anchor hrefs through.
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!href.startsWith("#")) return;
+
+      const target = document.getElementById(href.slice(1));
+      if (!target) return; // Unknown anchor — the browser's fallback is fine.
+
+      event.preventDefault();
+      onClose();
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const startY = window.scrollY;
+          // `block: "start"` honours the `scroll-padding-top` on <html>, so the
+          // heading clears the fixed header rather than hiding beneath it.
+          target.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+          window.history.replaceState(null, "", href);
+
+          // Some browsers drop a smooth scroll issued in the same frame as a
+          // layout change. If nothing moved, re-issue it instantly.
+          window.setTimeout(() => {
+            if (Math.abs(window.scrollY - startY) < 2) {
+              target.scrollIntoView({ behavior: "auto", block: "start" });
+            }
+          }, 180);
+        });
+      });
+    },
+    [onClose, reducedMotion],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -104,7 +152,10 @@ export function MobileMenu({ id, open, onClose, activeId, triggerRef }: MobileMe
       document.removeEventListener("keydown", onKeyDown);
       body.style.overflow = previousOverflow;
       body.style.paddingRight = previousPaddingRight;
-      trigger?.focus();
+      // preventScroll matters: without it, returning focus to the header button
+      // yanks the page back to the top and undoes the scroll a nav link just
+      // started.
+      trigger?.focus({ preventScroll: true });
     };
   }, [open, onClose, triggerRef]);
 
@@ -154,7 +205,7 @@ export function MobileMenu({ id, open, onClose, activeId, triggerRef }: MobileMe
                     <motion.li key={item.id} variants={itemVariants} className="border-b border-ng-line">
                       <a
                         href={item.href}
-                        onClick={onClose}
+                        onClick={(event) => goTo(event, item.href)}
                         aria-current={isActive ? "page" : undefined}
                         className={cn(
                           "group flex items-baseline gap-4 py-4 font-display text-2xl font-semibold sm:gap-5",
@@ -195,7 +246,7 @@ export function MobileMenu({ id, open, onClose, activeId, triggerRef }: MobileMe
                   size="lg"
                   arrow="right"
                   href={navCta.href}
-                  onClick={onClose}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) => goTo(event, navCta.href)}
                   className="w-full"
                 >
                   {navCta.label}

@@ -74,7 +74,7 @@ export function Contact() {
     >
       <SectionHeader
         align="left"
-        eyebrow="18 — Contact"
+        eyebrow="17 — Contact"
         title="Let’s Build Something"
         highlight="Next-Gen."
         description="Send an enquiry with the form, or use any of the direct lines below — both reach the same team."
