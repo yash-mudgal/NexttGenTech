@@ -42,8 +42,10 @@ committed. It just needs your accounts. Full walkthrough is in that README.
 
 - [x] Sign up at <https://resend.com> — done, workspace `nexttgentech`
 - [x] Add the domain `nexttgentech.com` — done, region Tokyo (ap-northeast-1)
-- [ ] **Add the 3 DNS records below at GoDaddy**, then click *Verify DNS
-      Records* in Resend
+- [x] **Add the 3 DNS records below at GoDaddy** — done 28 Aug 2026, all three
+      confirmed live against the authoritative nameserver `ns59.domaincontrol.com`.
+      Zoho's MX records on `@` were verified unchanged afterwards.
+- [ ] Wait for Resend to flip the domain to *Verified* (it polls on its own)
 - [ ] Create an API key with *Sending access*
 - [ ] Deploy:
       ```bash
