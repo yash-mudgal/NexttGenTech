@@ -40,10 +40,10 @@ Enquiries **do** reach `yash.mudgal@nexttgentech.com` today, but they arrive
 The Cloudflare Worker in [`worker/`](worker/README.md) is written, tested and
 committed. It just needs your accounts. Full walkthrough is in that README.
 
-- [ ] Sign up at <https://resend.com> — free, no card
-- [ ] Add the domain `nexttgentech.com`, put the 3 records it shows into GoDaddy
-      DNS. ⚠️ **Do not touch the existing MX records on `@`** — those route your
-      incoming Zoho mail. Resend's records sit on a `send` subdomain.
+- [x] Sign up at <https://resend.com> — done, workspace `nexttgentech`
+- [x] Add the domain `nexttgentech.com` — done, region Tokyo (ap-northeast-1)
+- [ ] **Add the 3 DNS records below at GoDaddy**, then click *Verify DNS
+      Records* in Resend
 - [ ] Create an API key with *Sending access*
 - [ ] Deploy:
       ```bash
@@ -56,8 +56,44 @@ committed. It just needs your accounts. Full walkthrough is in that README.
 - [ ] Paste the printed URL into `workerEndpoint` — `src/config/links.ts:70`
 - [ ] Commit and push. Done.
 
-**Cost: nothing.** Cloudflare Workers gives 100,000 requests/day free; Resend
-gives 3,000 emails/month free. Neither needs a card. **Don't add one** — with no
+### The exact DNS records
+
+Read off the Resend domain page on 28 Aug 2026. Add these at **GoDaddy → My
+Products → nexttgentech.com → DNS → Add New Record**. TTL: leave default (1 hr).
+
+| # | Type | Name | Value | Priority |
+| - | --- | --- | --- | --- |
+| 1 | `TXT` | `resend._domainkey` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDVQ4M2VxfMCAoEQNpgioInA6IMeOK9ETI5XhuEAkz3ZyVxKjJAjc8fXqNT3FCT6nn5v+sNNbz+IKj0e5LqNkwpii384eqgMS6dmqknQQs2GwoRBaH4mxKoYhnLT1kHjYU72rIe/f/2vohQSpIpB0VDUS0WmrV6Kh5rlH0Kh1JYGwIDAQAB` | — |
+| 2 | `MX` | `send` | `feedback-smtp.ap-northeast-1.amazonses.com` | `10` |
+| 3 | `TXT` | `send` | `v=spf1 include:amazonses.com ~all` | — |
+
+> GoDaddy appends the domain automatically. Enter the **Name** exactly as
+> written above — if the field then reads `resend._domainkey.nexttgentech.com`,
+> that is correct. Don't type the domain a second time.
+
+### 🚨 Do NOT add Resend's fourth record
+
+Resend's page also shows an **"Enable Receiving"** section asking for:
+
+```
+MX   @   inbound-smtp.ap-northeast-1.amazonaws.com   priority 9
+```
+
+**Skip it.** That record is for receiving mail *through Resend*. Your incoming
+mail is handled by **Zoho**, and its MX records live on `@`. Adding this one
+would put Amazon at priority 9 — *higher* precedence than Zoho's — and inbound
+mail to `info@nexttgentech.com` would start going to a Resend inbox that isn't
+being read.
+
+The three records above are all on `resend._domainkey` and `send`. None of them
+touch `@`, so none of them affect receiving. **Sending authorisation and inbox
+delivery are separate concerns** — that separation is the only reason this is
+safe to do on a live domain.
+
+### Cost
+
+**Nothing.** Cloudflare Workers gives 100,000 requests/day free; Resend gives
+3,000 emails/month free. Neither needs a card. **Don't add one** — with no
 payment method on file nothing can silently start billing you.
 
 While `workerEndpoint` is empty the form falls back to the relay automatically,
