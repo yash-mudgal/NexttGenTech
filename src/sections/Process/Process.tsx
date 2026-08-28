@@ -256,7 +256,7 @@ export function Process() {
     >
       <SectionHeader
         align="left"
-        eyebrow="13 — How We Work"
+        eyebrow="12 — How We Work"
         title="Seven Steps From"
         highlight="Problem To Platform"
         description="Every engagement runs through the same seven stages, from understanding the workflow to supporting the platform long after launch."

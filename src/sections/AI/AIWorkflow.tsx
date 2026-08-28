@@ -160,7 +160,7 @@ export function AIWorkflow() {
     >
       <SectionHeader
         align="left"
-        eyebrow="06 — Engineering Practice"
+        eyebrow="05 — Engineering Practice"
         title="Engineering With"
         highlight="AI at the Core"
         description="AI-assisted tooling is part of how the team works day to day — from planning through to deployment — and every change is still read and reviewed by an engineer before it merges."

@@ -109,7 +109,7 @@ export function DeveloperCulture() {
           <Reveal direction="up" duration={0.5}>
             <span className="ng-eyebrow mb-4">
               <span aria-hidden="true" className="h-px w-6 bg-gradient-to-r from-transparent to-ng-cyan" />
-              14 — Engineering Culture
+              13 — Engineering Culture
             </span>
           </Reveal>
 

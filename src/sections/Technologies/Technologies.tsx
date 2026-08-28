@@ -265,7 +265,7 @@ export function Technologies() {
       <SectionHeader
         align="center"
         headingId="technologies-heading"
-        eyebrow="07 — Technology Stack"
+        eyebrow="06 — Technology Stack"
         title="The Stack Behind"
         highlight="Every Build"
         description="These are the languages, frameworks, data engines and platforms our engineers work with day to day."

@@ -1,7 +1,6 @@
 import Hero from "@/sections/Hero/Hero";
 import TechMarquee from "@/sections/Marquee/TechMarquee";
 import Solutions from "@/sections/Solutions/Solutions";
-import Products from "@/sections/Products/Products";
 import ErpEcosystem from "@/sections/Ecosystem/ErpEcosystem";
 import AISection from "@/sections/AI/AISection";
 import AIUseCases from "@/sections/AI/AIUseCases";
@@ -36,7 +35,6 @@ export function Home() {
 
       {/* — What we build ————————————————————————————— */}
       <Solutions />
-      <Products />
       <ErpEcosystem />
 
       {/* — The intelligence layer ————————————————————— */}

@@ -1,13 +1,39 @@
+/* ============================================================================
+ * CORE SOLUTIONS
+ * ----------------------------------------------------------------------------
+ * The six platforms in @/data/products, presented once.
+ *
+ * This used to be two consecutive sections — "Core Solutions" (cards with
+ * module lists) and "Products" (a slider of dashboard mockups) — each with its
+ * own number, header, description and 3D banner, both listing the same six
+ * platforms. A visitor read School ERP, Hospital ERP, CRM, HRMS, Inventory and
+ * Restaurant ERP twice in a row before reaching anything new, which is what
+ * made the page feel repetitive.
+ *
+ * They are now one section with two layers that answer different questions:
+ *
+ *   what each platform is    → the card grid, with module counts
+ *   what it looks like       → the slider, with dashboard mockups
+ *
+ * One header, one banner, one number. The banner is wired to both layers: it
+ * highlights whichever platform the visitor is hovering in the grid *or* has
+ * centred in the slider, so the two layers read as one thing rather than two
+ * takes on the same list.
+ * ========================================================================== */
+
 import { lazy, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import Section from "@/components/layout/Section";
 import SectionHeader from "@/components/ui/SectionHeader";
+import Button from "@/components/ui/Button";
 import { Aura, GridBackdrop } from "@/components/ui/Aura";
-import { Stagger, StaggerItem } from "@/components/ui/Reveal";
+import { Reveal, Stagger, StaggerItem } from "@/components/ui/Reveal";
 import SceneView from "@/components/3d/SceneView";
 import { sectionIds } from "@/config/links";
 import { accentOf } from "@/lib/accent";
 import { products } from "@/data/products";
+import ProductSlider from "@/sections/Products/ProductSlider";
+import { ActiveProductContext } from "@/sections/Products/ProductCard";
 import SolutionCard from "./SolutionCard";
 import type { SolutionCardSize } from "./SolutionCard";
 
@@ -86,11 +112,6 @@ function LatticeBand() {
 
 /* ── Section ─────────────────────────────────────────────────────────────── */
 
-/**
- * Core Solutions — the six platforms, laid out as an asymmetric grid rather
- * than six identical tiles so the flagships read as flagships, under a 3D
- * lattice that shows them as one connected structure.
- */
 export function Solutions() {
   /*
    * Hover is lifted here so the scene can highlight the matching cluster. It is
@@ -98,6 +119,13 @@ export function Solutions() {
    * pointer never sets it — a tap would otherwise leave a cluster stuck lit.
    */
   const [hovered, setHovered] = useState<string | null>(null);
+
+  /*
+   * The rail owns its active index — see ProductSlider — so the centred card
+   * reports itself up through ActiveProductContext rather than the index being
+   * threaded back down through the slider.
+   */
+  const [activeProduct, setActiveProduct] = useState(products[0]);
 
   const track = (id: string) => (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse") setHovered(id);
@@ -127,21 +155,31 @@ export function Solutions() {
         eyebrow="01 — Core Solutions"
         title="Technology Built Around"
         highlight="Your Business"
-        description="Each of these is a complete platform engineered end to end — its own modules, portals and reporting — not a handful of features bolted onto a generic template."
+        description="Six complete platforms — education, healthcare and hospitality ERP alongside CRM, HRMS and inventory control. Each is engineered end to end with its own modules, portals and reporting, not a handful of features bolted onto a generic template."
+        aside={
+          <Button variant="outline" arrow="right" href="#contact">
+            Request a walkthrough
+          </Button>
+        }
       />
 
       {/* Reserved banner. The shared canvas paints above section backgrounds,
           so the scene gets its own box with a definite height and never sits
-          behind the cards. */}
+          behind the cards.
+
+          `hovered ?? activeProduct.id` is what ties the two layers together:
+          the lattice follows the pointer while the visitor is in the grid, and
+          falls back to whichever platform the slider has centred. */}
       <SceneView
         className="mt-10 h-[14rem] w-full sm:mt-12 sm:h-[17rem] lg:h-[21rem]"
         cameraPosition={[0, 0.4, 8.5]}
         cameraFov={38}
         fallback={<LatticeBand />}
       >
-        <SolutionsScene hovered={hovered} />
+        <SolutionsScene hovered={hovered ?? activeProduct.id} />
       </SceneView>
 
+      {/* ── Layer one: what each platform is ─────────────────────────────── */}
       <Stagger className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 lg:mt-12 lg:grid-cols-6 lg:gap-6">
         {products.map((product, index) => {
           const { span, size } = layout[index] ?? fallback;
@@ -162,6 +200,34 @@ export function Solutions() {
           );
         })}
       </Stagger>
+
+      {/* ── Layer two: what each platform looks like ─────────────────────────
+          Keeps the `#products` anchor alive now that the standalone Products
+          section is gone — the navbar link still lands on the dashboards,
+          which is what it always pointed at. `scroll-mt` clears the fixed
+          header the same way `scroll-padding-top` does for the top-level
+          sections. */}
+      <div id={sectionIds.products} className="mt-20 scroll-mt-26 sm:mt-24">
+        <Reveal direction="up">
+          <h3 className="font-display text-[clamp(1.375rem,1rem+1.4vw,1.875rem)] font-semibold leading-tight text-ng-fg">
+            Inside the <span className="ng-gradient-text">platforms</span>
+          </h3>
+          <p className="mt-3 max-w-2xl text-pretty leading-relaxed text-ng-muted">
+            The same six systems, from the operator&rsquo;s side of the screen.
+          </p>
+        </Reveal>
+
+        <ActiveProductContext.Provider value={setActiveProduct}>
+          <ProductSlider className="mt-8 sm:mt-10" />
+        </ActiveProductContext.Provider>
+
+        <Reveal direction="up" delay={0.1}>
+          <p className="mt-8 font-mono text-[0.6875rem] leading-relaxed text-ng-faint">
+            Interfaces shown are illustrative product mockups — figures are sample data, not client
+            results.
+          </p>
+        </Reveal>
+      </div>
     </Section>
   );
 }

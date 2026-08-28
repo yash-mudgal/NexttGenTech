@@ -58,7 +58,7 @@ export function About() {
   return (
     <Section id="about" width="wide" spacing="lg">
       <SectionHeader
-        eyebrow="16 — About"
+        eyebrow="15 — About"
         title="A Software Company"
         highlight="Built Around Products"
         align="left"

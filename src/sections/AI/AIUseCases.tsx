@@ -9,7 +9,7 @@ export function AIUseCases() {
     <Section width="default" spacing="md">
       <SectionHeader
         align="center"
-        eyebrow="05 — Applied AI"
+        eyebrow="04 — Applied AI"
         title="Where Intelligence"
         highlight="Actually Helps"
         description="Six places AI earns its keep inside a business system, each one working on records the organisation already owns."

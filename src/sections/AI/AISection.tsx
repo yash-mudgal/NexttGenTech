@@ -62,7 +62,7 @@ export function AISection() {
     >
       <SectionHeader
         align="left"
-        eyebrow="04 — AI & Innovation"
+        eyebrow="03 — AI & Innovation"
         title="Intelligence Built"
         highlight="Into Software"
         description="We design AI into business systems where it measurably helps — inside the workflow people already use — rather than bolting a chat box onto a finished product."
