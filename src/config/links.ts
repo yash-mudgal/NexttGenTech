@@ -9,9 +9,9 @@
  *     (see `isConfigured` below). Swap in the real URL and it activates itself.
  * ========================================================================== */
 
-/** Live product / demo destinations. Replace each "#" with the real URL. */
+/** Live product destinations. Replace each "#" with the real URL. */
 export const productLinks = {
-  schoolERP: "#", // «REPLACE» e.g. "https://school.nextgen.example"
+  schoolERP: "https://sas.nexttgentech.com", // live — EduCare / SAS
   hospitalERP: "#", // «REPLACE»
   crm: "#", // «REPLACE»
   hrms: "#", // «REPLACE»
@@ -20,6 +20,19 @@ export const productLinks = {
 } as const;
 
 export type ProductLinkKey = keyof typeof productLinks;
+
+/**
+ * Self-serve trial destinations, keyed the same way as `productLinks`.
+ *
+ * A product only shows a "Try the demo" control when its entry here is a real
+ * URL, so the five platforms still in the pipeline keep their single-CTA
+ * layout untouched. Point this at the sign-up screen, not the login screen —
+ * a visitor with no account gets nowhere on a login form.
+ */
+export const productDemoLinks: Partial<Record<ProductLinkKey, string>> = {
+  // Registers a sandbox school seeded with classes, fee heads and exam types.
+  schoolERP: "https://sas.nexttgentech.com/Account/Register",
+};
 
 /** Social profiles. Leave as "#" to render the icon in a muted, inert state. */
 export const socialLinks = {
